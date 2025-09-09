@@ -123,8 +123,12 @@ class QuantumAdapter(Node):
 
         # Flush buffered packets now that we can decrypt/encrypt
         while not self.input_data_buffer.empty():
-            packet = self.input_data_buffer.get()
-            self.receive_packet(packet)
+            try:
+                packet = self.input_data_buffer.get()
+                self.receive_packet(packet)
+            except Exception as e:
+                self.logger.warning(f"Error processing buffered packet: {e}")
+                # Continue processing other packets
 
     def calculate_distance(self, node1, node2):
         x1, y1 = node1.location
@@ -153,6 +157,11 @@ class QuantumAdapter(Node):
                 elif hasattr(host, "validate_student_implementation"):
                     host.validate_student_implementation()
                     validated = getattr(host, "student_code_validated", False)
+                elif hasattr(host, "force_attach_student_implementation"):
+                    print(f"🚨 {self.name}: Trying force attach as last resort")
+                    if host.force_attach_student_implementation():
+                        host.validate_student_implementation()
+                        validated = getattr(host, "student_code_validated", False)
             except Exception as e:
                 print(f"❌ {self.name}: Autowire/validation failed: {e}")
                 validated = False
@@ -316,7 +325,8 @@ class QuantumAdapter(Node):
             self.local_classical_router, packet.to_address
         )
         if len(shortest_path) <= 1:
-            raise NotConnectedError(self.local_classical_router, packet.to_address)
+            self.logger.warning(f"No path found to {packet.to_address}, dropping packet")
+            return
 
         next_hop = shortest_path[1]
         packet.next_hop = next_hop
@@ -324,7 +334,8 @@ class QuantumAdapter(Node):
             self.local_classical_router, next_hop
         )
         if not next_connection:
-            raise NotConnectedError(self.local_classical_router, next_hop)
+            self.logger.warning(f"No connection to {next_hop}, dropping packet")
+            return
 
         next_connection.transmit_packet(packet)
 

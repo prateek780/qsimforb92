@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, Info, Search, BookOpen, GitBranch, Network, ChevronDown, Activity } from "lucide-react"
 import { WebSocketClient } from "@/services/socket"
-import { convertEventToLogWithB92 } from "./log-parser-b92"
+import { convertEventToLog } from "./log-parser"
 import { Input } from "../ui/input"
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "../ui/dropdown-menu"
 
@@ -104,10 +104,9 @@ export function SimulationLogsPanel() {
   const [logFilter, setLogFilter] = useState<LogLevel[]>([LogLevel.STORY, LogLevel.PROTOCOL, LogLevel.ERROR])
   const [searchQuery, setSearchQuery] = useState("")
   
-  // Helper function to parse events - auto-detect B92 vs BB84
+  // Helper function to parse events - handles both BB84 and B92
   const parseEventToLog = (event: any) => {
-    // Always use B92 log parser for B92 simulation
-    return convertEventToLogWithB92(event)
+    return convertEventToLog(event)
   }
   
   const [simulationLogs, setSimulationLogs] = useState<LogI[]>(
@@ -169,9 +168,10 @@ export function SimulationLogsPanel() {
       }
     }
 
-    socket.onMessage("simulation_event", handleEvent)
+    // Use main WebSocket service for all simulation events
+    socket.addSimulationEventListener(handleEvent)
     return () => {
-      socket.offMessage("simulation_event", handleEvent)
+      socket.removeSimulationEventListener(handleEvent)
     }
   }, [])
 

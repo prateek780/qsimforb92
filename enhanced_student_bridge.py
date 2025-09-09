@@ -2,7 +2,6 @@
 # ===================================
 # Bridge for using StudentQuantumHost implementation from student_bb84_impl.py
 # Preserves all features: qubit sending, receiving, basis reconciliation, error estimation
-# Enhanced version - supports any host names
 
 import random
 import json
@@ -35,44 +34,46 @@ def measure_quantum_state(quantum_state, measurement_basis):
 # Enhanced bridge class using student's actual code
 # =================================================
 class EnhancedStudentImplementationBridge:
-    """Directly uses StudentQuantumHost from student_bb84_impl.py with flexible names"""
+    """Directly uses StudentQuantumHost from student_bb84_impl.py"""
     
-    def __init__(self, student_alice=None, student_bob=None, alice_name="Alice", bob_name="Bob"):
-        # Store the actual names for flexible logging
-        self.alice_name = alice_name
-        self.bob_name = bob_name
-        
+    def __init__(self, student_alice=None, student_bob=None):
         if student_alice is None:
-            self.student_alice = StudentQuantumHost(self.alice_name)
+            print("Creating Alice using StudentQuantumHost...")
+            self.student_alice = StudentQuantumHost("Alice")
         else:
             self.student_alice = student_alice
-            self.alice_name = student_alice.name  # Get actual name from student host
             
         if student_bob is None:
-            self.student_bob = StudentQuantumHost(self.bob_name)
+            print("Creating Bob using StudentQuantumHost...")
+            self.student_bob = StudentQuantumHost("Bob")
         else:
             self.student_bob = student_bob
-            self.bob_name = student_bob.name  # Get actual name from student host
             
         self.host = None
         self.qkd_phase = "idle"
         self.bits_received = 0
         self.expected_bits = 0
+        
+        print("✅ Enhanced Bridge created using StudentQuantumHost!")
+        print(f"   Alice type: {type(self.student_alice).__name__}")
+        print(f"   Bob type: {type(self.student_bob).__name__}")
     
     def bb84_send_qubits(self, num_qubits):
         """Send qubits using student's implementation directly"""
         if self.host is None:
+            print("Bridge not attached to a simulation host")
             return False
             
         self.qkd_phase = "sending"
         self.expected_bits = num_qubits
+        print(f"Starting BB84 protocol with {num_qubits} qubits")
         
         if self.host and hasattr(self.host, '_send_update'):
             from core.enums import SimulationEventType
             self.host._send_update(SimulationEventType.INFO, 
                                    num_qubits=num_qubits, 
                                    protocol="BB84",
-                                   message=f"STUDENT BB84: Starting with {num_qubits} qubits using student code",
+                                   message=f"STUDENT BB84: Starting with {num_qubits} qubits using your code!",
                                    student_implementation="StudentQuantumHost")
         
         # Call student's method
@@ -85,16 +86,22 @@ class EnhancedStudentImplementationBridge:
         # Send through quantum channel
         channel = self.host.get_channel()
         if channel is None:
+            print(f"ERROR: {self.host.name} has no quantum channel")
             return False
         
-        for q in encoded_qubits:
+        print(f"Sending {len(encoded_qubits)} qubits through quantum channel...")
+        for i, q in enumerate(encoded_qubits):
             self.host.send_qubit(q, channel)
+            if i % 10 == 0:
+                print(f"   Sent {i+1}/{len(encoded_qubits)} qubits")
+        
+        print(f"All {len(encoded_qubits)} qubits sent successfully")
         
         if self.host and hasattr(self.host, '_send_update'):
             from core.enums import SimulationEventType
             self.host._send_update(SimulationEventType.DATA_SENT, 
                                    qubits_sent=len(encoded_qubits),
-                                   message=f"STUDENT BB84: Sent {len(encoded_qubits)} qubits")
+                                   message=f"STUDENT BB84: Sent {len(encoded_qubits)} qubits using bb84_send_qubits()!")
         
         # Trigger reconciliation
         if self.host and hasattr(self.host, 'send_bases_for_reconcile'):
@@ -109,6 +116,7 @@ class EnhancedStudentImplementationBridge:
             
         if self.qkd_phase == "idle":
             self.qkd_phase = "receiving"
+            print("Started receiving qubits...")
             
         self.bits_received += 1
         result = self.student_bob.process_received_qbit(qbit, from_channel)
@@ -119,11 +127,15 @@ class EnhancedStudentImplementationBridge:
         if self.host and hasattr(self.host, '_send_update'):
             from core.enums import SimulationEventType
             self.host._send_update(SimulationEventType.DATA_RECEIVED,
-                                   message=f"STUDENT {self.bob_name}: Received qubit {self.bits_received}/{self.expected_bits}",
+                                   message=f"STUDENT BOB: Received qubit {self.bits_received}/{self.expected_bits}!",
                                    qubits_received=self.bits_received,
                                    total_expected=self.expected_bits)
         
+        if self.bits_received % 10 == 0:
+            print(f"   Received {self.bits_received}/{self.expected_bits} qubits")
+        
         if self.bits_received >= self.expected_bits:
+            print(f"Received all {self.bits_received} qubits, ready for reconciliation...")
             self.qkd_phase = "ready_for_reconciliation"
         
         return result
@@ -134,6 +146,7 @@ class EnhancedStudentImplementationBridge:
             return False
         
         self.qkd_phase = "reconciling"
+        print("Starting basis reconciliation...")
         
         shared_indices, shared_bits = self.student_bob.bb84_reconcile_bases(
             alice_bases=their_bases,
@@ -146,7 +159,7 @@ class EnhancedStudentImplementationBridge:
             from core.enums import SimulationEventType
             efficiency = (len(shared_indices) / len(their_bases) * 100) if their_bases else 0
             self.host._send_update(SimulationEventType.INFO,
-                                   message=f"STUDENT {self.bob_name}: Found {len(shared_indices)} matching bases ({efficiency:.1f}% efficiency)",
+                                   message=f"STUDENT BOB: Found {len(shared_indices)} matching bases ({efficiency:.1f}% efficiency)!",
                                    shared_bases=len(shared_indices),
                                    efficiency=efficiency)
         
@@ -159,30 +172,30 @@ class EnhancedStudentImplementationBridge:
             return False
         
         self.qkd_phase = "error_checking"
+        print("Starting error rate estimation...")
         
-        if not their_bits_sample:
-            positions, reference_bits = [], []
-        else:
-            positions, reference_bits = zip(*their_bits_sample)
-        
+        positions, reference_bits = zip(*their_bits_sample) if their_bits_sample else ([], [])
         error_rate = self.student_bob.bb84_estimate_error_rate(positions, reference_bits)
+        
+        print(f"Student Bob error rate: {error_rate:.1%}")
         
         if self.host and hasattr(self.host, '_send_update'):
             from core.enums import SimulationEventType
             self.host._send_update(SimulationEventType.INFO,
-                                   message=f"STUDENT {self.bob_name}: Error rate {error_rate:.1%}",
+                                   message=f"STUDENT BOB: Error rate {error_rate:.1%} using bb84_estimate_error_rate()!",
                                    error_rate=error_rate)
         
         if self.host and hasattr(self.host, '_send_update'):
             from core.enums import SimulationEventType
             self.host._send_update(SimulationEventType.SHARED_KEY_GENERATED,
-                                   message="BB84 QKD protocol completed successfully using student code",
+                                   message="BB84 QKD protocol completed successfully using student's code!",
                                    error_rate=error_rate,
                                    shared_bases=len(self.host.shared_bases_indices))
         
         self.host.send_classical_data({'type': 'complete'})
         self.qkd_phase = "complete"
         
+        print("BB84 PROTOCOL COMPLETE using student's implementation!")
         return error_rate
     
     def update_shared_bases_indices(self, shared_base_indices):
@@ -190,6 +203,7 @@ class EnhancedStudentImplementationBridge:
         if self.host is None:
             return False
         
+        print(f"Alice: Received {len(shared_base_indices)} shared bases indices from Bob")
         self.host.shared_bases_indices = shared_base_indices
         
         if self.host and hasattr(self.host, 'update_shared_bases_indices'):
@@ -198,35 +212,21 @@ class EnhancedStudentImplementationBridge:
         return True
 
 # ==========================================
-# Factory function for easy setup
-# ==========================================
-def create_bridge(host1_name, host2_name):
-    """Create a bridge with custom host names"""
-    student_host1 = StudentQuantumHost(host1_name)
-    student_host2 = StudentQuantumHost(host2_name)
-    
-    bridge = EnhancedStudentImplementationBridge(
-        student_alice=student_host1,
-        student_bob=student_host2,
-        alice_name=host1_name,
-        bob_name=host2_name
-    )
-    return bridge
-
-# ==========================================
-# Wrapper to attach bridge to host
+# Simple wrapper to attach bridge to host
 # ==========================================
 class StudentImplementationBridge:
-    """Wrapper that uses EnhancedStudentImplementationBridge with flexible names"""
+    """Wrapper that uses EnhancedStudentImplementationBridge"""
     
-    def __init__(self, host, host1_name="Alice", host2_name="Bob"):
+    def __init__(self, host):
         self.host = host
-        self._bridge = create_bridge(host1_name, host2_name)
+        self._bridge = EnhancedStudentImplementationBridge()
         self._bridge.host = host
+        print(f"✅ Bridge created using StudentQuantumHost for host: {host.name if host else 'Unknown'}")
     
     def set_host(self, host):
         self.host = host
         self._bridge.host = host
+        print(f"Bridge host updated: {host.name if host else 'Unknown'}")
     
     def bb84_send_qubits(self, num_qubits):
         return self._bridge.bb84_send_qubits(num_qubits)

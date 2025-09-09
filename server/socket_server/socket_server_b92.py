@@ -8,11 +8,11 @@ Separate from the main socket server to avoid conflicts with BB84.
 
 import asyncio
 import json
+from datetime import datetime
 from fastapi import WebSocket, WebSocketDisconnect
 from typing import List, Dict, Any
 from utils.singleton import singleton
 from core.event_b92 import B92Event, B92EventType
-from server.api.simulation.manager_b92 import b92_simulation_manager
 
 
 @singleton
@@ -25,8 +25,7 @@ class B92ConnectionManager:
         self.b92_events: List[Dict[str, Any]] = []
         self.max_events = 1000
         
-        # Set up B92 simulation manager
-        b92_simulation_manager.set_socket_connection(self)
+        # B92 simulation manager will connect to this socket manager
 
     async def connect(self, websocket: WebSocket):
         """Accepts a new WebSocket connection for B92 events"""
@@ -108,7 +107,8 @@ class B92ConnectionManager:
     async def _send_recent_b92_events(self, websocket: WebSocket):
         """Send recent B92 events to a new connection"""
         try:
-            recent_events = b92_simulation_manager.get_recent_b92_events(50)
+            # Send recent events from local storage
+            recent_events = self.b92_events[-50:] if self.b92_events else []
             for event in recent_events:
                 await self.send_personal_message(event, websocket)
         except Exception as e:
@@ -121,7 +121,6 @@ class B92ConnectionManager:
     def clear_b92_events(self):
         """Clear all B92 events"""
         self.b92_events.clear()
-        b92_simulation_manager.clear_b92_events()
 
 
 # Global B92 connection manager instance

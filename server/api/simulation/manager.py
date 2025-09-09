@@ -357,8 +357,42 @@ class SimulationManager:
 
     def _attach_student_impl_to_hosts(self) -> None:
         """Attach student implementation plugin (if present) to InteractiveQuantumHost nodes."""
+        print("🔍 _attach_student_impl_to_hosts called")
         if not self.simulation_world:
+            print("❌ No simulation world found")
             return
+        
+        print("🔍 Checking for BB84 implementation...")
+        # Check for BB84 implementation first (priority)
+        if os.path.exists("student_implementation_status.json"):
+            try:
+                with open("student_implementation_status.json", "r") as f:
+                    status = json.load(f)
+                print(f"🔍 BB84 status file contents: {status}")
+                if status.get("student_implementation_ready") and status.get("protocol") == "bb84":
+                    print("🔹 BB84 student implementation detected, attaching to hosts...")
+                    self._attach_bb84_student_impl_to_hosts()
+                    return
+                else:
+                    print(f"❌ BB84 status file found but not ready or wrong protocol: ready={status.get('student_implementation_ready')}, protocol={status.get('protocol')}")
+            except Exception as e:
+                print(f"Error reading BB84 status file: {e}")
+        else:
+            print("❌ BB84 status file not found")
+        
+        # Fallback to B92 implementation (only if not disabled)
+        if os.path.exists("student_b92_implementation_status.json") and not os.path.exists("student_b92_implementation_status.json.disabled"):
+            try:
+                with open("student_b92_implementation_status.json", "r") as f:
+                    status = json.load(f)
+                if status.get("student_implementation_ready"):
+                    print("🔹 B92 student implementation detected, attaching to hosts...")
+                    self._attach_b92_student_impl_to_hosts()
+                    return
+            except Exception as e:
+                print(f"Error reading B92 status file: {e}")
+        
+        # Legacy fallback for old BB84 implementations without protocol field
         status_file = "student_implementation_status.json"
         module_name = class_name = None
         if os.path.exists(status_file):
@@ -380,27 +414,96 @@ class SimulationManager:
             print(f"Failed to import student plugin {module_name}.{class_name}: {e}")
             return
 
+    def _attach_bb84_student_impl_to_hosts(self) -> None:
+        """Attach BB84 student implementation to InteractiveQuantumHost nodes."""
         try:
-            # Import the appropriate quantum host based on available implementations
-            import os
-            if os.path.exists("student_b92_implementation_status.json"):
-                from quantum_network.interactive_host_b92 import InteractiveQuantumHostB92 as InteractiveQuantumHost
-                print("🔹 Using B92 Interactive Quantum Host in manager")
-            else:
-                from quantum_network.interactive_host import InteractiveQuantumHost
-                print("🔹 Using BB84 Interactive Quantum Host in manager")
+            print("🔹 _attach_bb84_student_impl_to_hosts called")
+            # Import BB84 student implementation
+            from student_bb84_impl import StudentQuantumHost
+            from enhanced_student_bridge import EnhancedStudentImplementationBridge
+            
+            print("🔹 Attaching BB84 student implementation to hosts...")
+            print(f"🔹 Simulation world: {self.simulation_world}")
+            print(f"🔹 Networks: {getattr(self.simulation_world, 'networks', [])}")
+            
+            networks = getattr(self.simulation_world, 'networks', []) or []
+            print(f"🔹 Found {len(networks)} networks")
+            
+            for network in networks:
+                print(f"🔹 Processing network: {network}")
+                nodes = getattr(network, 'nodes', []) or []
+                print(f"🔹 Found {len(nodes)} nodes in network")
+                for node in nodes:
+                    print(f"🔹 Processing node: {node} (class: {node.__class__})")
+                    if hasattr(node, '__class__') and 'InteractiveQuantumHost' in str(node.__class__):
+                        print(f"🔹 Attaching BB84 implementation to {node.name}")
+                        
+                        # Create BB84 bridge with student implementations
+                        bridge = EnhancedStudentImplementationBridge(
+                            alice_name="Alice",
+                            bob_name="Bob"
+                        )
+                        bridge.host = node
+                        
+                        # Attach to host
+                        node.student_implementation = bridge
+                        node.enhanced_bridge = bridge
+                        
+                        print(f"✅ BB84 implementation attached to {node.name}")
+                        print(f"✅ Node enhanced_bridge: {hasattr(node, 'enhanced_bridge')}")
+                        print(f"✅ Node student_implementation: {hasattr(node, 'student_implementation')}")
+                    else:
+                        print(f"⚠️ Skipping node {node} - not BB84 host")
+            
+            print("✅ BB84 student implementation attached to all hosts")
+            
         except Exception as e:
-            print(f"Failed to import InteractiveQuantumHost: {e}")
-            return
+            print(f"❌ Error attaching BB84 student implementation: {e}")
+            import traceback
+            traceback.print_exc()
 
-        for network in getattr(self.simulation_world, 'networks', []) or []:
-            for node in getattr(network, 'nodes', []) or []:
-                if isinstance(node, InteractiveQuantumHost) and getattr(node, 'student_implementation', None) is None:
-                    try:
-                        node.student_implementation = plugin_cls(node)
-                        node.validate_student_implementation()
-                    except Exception as e:
-                        print(f"Could not attach plugin to host {getattr(node, 'name', 'unknown')}: {e}")
+    def _attach_b92_student_impl_to_hosts(self) -> None:
+        """Attach B92 student implementation to InteractiveQuantumHostB92 nodes."""
+        try:
+            # Import B92 student implementation
+            from student_b92_impl import StudentB92Host
+            from enhanced_student_bridge_b92 import EnhancedStudentB92ImplementationBridge
+            
+            print("🔹 Attaching B92 student implementation to hosts...")
+            print(f"🔹 Simulation world: {self.simulation_world}")
+            print(f"🔹 Networks: {getattr(self.simulation_world, 'networks', [])}")
+            
+            for network in getattr(self.simulation_world, 'networks', []) or []:
+                print(f"🔹 Processing network: {network}")
+                for node in getattr(network, 'nodes', []) or []:
+                    print(f"🔹 Processing node: {node} (class: {node.__class__})")
+                    if hasattr(node, '__class__') and 'InteractiveQuantumHostB92' in str(node.__class__):
+                        print(f"🔹 Attaching B92 implementation to {node.name}")
+                        
+                        # Create B92 bridge with student implementations
+                        bridge = EnhancedStudentB92ImplementationBridge(
+                            alice_name="Alice",
+                            bob_name="Bob"
+                        )
+                        bridge.host = node
+                        
+                        # Attach to host
+                        node.student_implementation = bridge
+                        node.enhanced_bridge = bridge
+                        
+                        print(f"✅ B92 implementation attached to {node.name}")
+                        print(f"✅ Node enhanced_bridge: {hasattr(node, 'enhanced_bridge')}")
+                        print(f"✅ Node student_implementation: {hasattr(node, 'student_implementation')}")
+                    else:
+                        print(f"⚠️ Skipping node {node} - not B92 host")
+            
+            print("✅ B92 student implementation attached to all hosts")
+            
+        except Exception as e:
+            print(f"❌ Error attaching B92 student implementation: {e}")
+            import traceback
+            traceback.print_exc()
+
 
     def stop(self) -> None:
         """Stop the running simulation"""

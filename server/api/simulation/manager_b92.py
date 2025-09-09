@@ -27,7 +27,37 @@ class B92SimulationManager:
         
         # Register with B92 event manager
         b92_event_manager.add_event_listener(self._handle_b92_event)
+        
+        # Connect to B92 WebSocket service (delayed to avoid circular import)
+        self._connect_to_b92_websocket_delayed()
     
+    def _connect_to_b92_websocket_delayed(self):
+        """Connect to B92 WebSocket service with delay to avoid circular import"""
+        import threading
+        import time
+        
+        def delayed_connect():
+            time.sleep(1)  # Wait 1 second for all modules to initialize
+            try:
+                from server.socket_server.socket_server_b92 import b92_connection_manager
+                self.socket_conn = b92_connection_manager
+                print("✅ Connected to B92 WebSocket service")
+            except Exception as e:
+                print(f"❌ Error connecting to B92 WebSocket service: {e}")
+        
+        # Start connection in a separate thread
+        thread = threading.Thread(target=delayed_connect, daemon=True)
+        thread.start()
+
+    def _connect_to_b92_websocket(self):
+        """Connect to B92 WebSocket service"""
+        try:
+            from server.socket_server.socket_server_b92 import b92_connection_manager
+            self.socket_conn = b92_connection_manager
+            print("✅ Connected to B92 WebSocket service")
+        except Exception as e:
+            print(f"❌ Error connecting to B92 WebSocket service: {e}")
+
     def set_socket_connection(self, socket_conn: ConnectionManager):
         """Set the WebSocket connection manager"""
         self.socket_conn = socket_conn
@@ -41,10 +71,35 @@ class B92SimulationManager:
         
         # Broadcast to WebSocket clients
         if self.socket_conn:
-            asyncio.create_task(self._broadcast_b92_event(event))
+            self._broadcast_b92_event_sync(event)
     
+    def _broadcast_b92_event_sync(self, event: B92Event):
+        """Broadcast B92 event to all WebSocket clients (synchronous)"""
+        try:
+            if self.socket_conn:
+                message = event.to_websocket_message()
+                # Use threading to handle async broadcasting
+                import threading
+                
+                def run_async_broadcast():
+                    try:
+                        # Create a new event loop for this thread
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        loop.run_until_complete(self.socket_conn.broadcast(message))
+                        loop.close()
+                        print(f"B92 Event broadcasted: {event.event_type.value} from {event.node.name}")
+                    except Exception as e:
+                        print(f"Error in async B92 broadcast thread: {e}")
+                
+                # Start the async broadcast in a separate thread
+                thread = threading.Thread(target=run_async_broadcast, daemon=True)
+                thread.start()
+        except Exception as e:
+            print(f"Error broadcasting B92 event: {e}")
+
     async def _broadcast_b92_event(self, event: B92Event):
-        """Broadcast B92 event to all WebSocket clients"""
+        """Broadcast B92 event to all WebSocket clients (async)"""
         try:
             if self.socket_conn:
                 message = event.to_websocket_message()

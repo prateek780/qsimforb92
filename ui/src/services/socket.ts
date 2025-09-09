@@ -296,6 +296,20 @@ export class WebSocketClient {
     public isConnected(): boolean {
         return !!(this.ws && this.ws.readyState === WebSocket.OPEN);
     }
+
+    /**
+     * Add a simulation event listener (alias for onMessage with SimulationEvent)
+     */
+    public addSimulationEventListener(handler: MessageHandler): void {
+        this.onMessage(SocketEvents.SimulationEvent, handler);
+    }
+
+    /**
+     * Remove a simulation event listener (alias for offMessage with SimulationEvent)
+     */
+    public removeSimulationEventListener(handler: MessageHandler): void {
+        this.offMessage(SocketEvents.SimulationEvent, handler);
+    }
 }
 
 // Export a default singleton instance

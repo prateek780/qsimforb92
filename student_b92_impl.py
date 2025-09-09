@@ -40,17 +40,30 @@ class StudentB92Host:
     # Receiver chooses randomly between Z-basis {|0>, |1>} or X-basis {|+>, |->}.
     # Return the measurement outcome and basis used.
     def b92_measure_qubit(self, qubit):
+        """
+        Simulate measurement of a qubit in the B92 protocol.
+        
+        Args:
+            qubit (str): Quantum state representation
+        
+        Returns:
+            tuple: (measurement outcome, basis used)
+        """
         basis = random.choice(["Z", "X"])
+        
         if basis == "Z":
             if qubit == "|0>":
                 return 0, "Z"
             elif qubit == "|+>":
                 return random.choice([0, 1]), "Z"
-        else:
+        elif basis == "X":
             if qubit == "|+>":
                 return 0, "X"
             elif qubit == "|0>":
                 return random.choice([0, 1]), "X"
+        
+        # This should never be reached with valid B92 qubits
+        raise ValueError(f"Invalid qubit state: {qubit}")
 
     # PROMPT FOR b92_sifting FUNCTION:
     # Implement the sifting stage of the B92 protocol.
@@ -59,16 +72,35 @@ class StudentB92Host:
     # - X-basis: outcome 1 -> sender sent |0>
     # Discard inconclusive results.
     def b92_sifting(self, sent_bits, received_measurements):
+        """
+        Perform the sifting stage of the B92 protocol.
+        
+        Args:
+            sent_bits (list): List of bits sent by Alice
+            received_measurements (list): List of (outcome, basis) pairs from Bob
+        
+        Returns:
+            tuple: (sifted_sender, sifted_receiver)
+        """
         sifted_sender = []
         sifted_receiver = []
+        
         for bit, (outcome, basis) in zip(sent_bits, received_measurements):
+            # B92 sifting rules:
+            # - In Z basis: outcome 1 indicates the sender sent |+> (bit 1)
+            # - In X basis: outcome 1 indicates the sender sent |0> (bit 0)
+            # All other results are inconclusive and should be discarded
+            
             if basis == "Z" and outcome == 1:
+                # Z-basis outcome 1 means Alice sent |+> (bit 1)
                 sifted_sender.append(1)
                 sifted_receiver.append(1)
             elif basis == "X" and outcome == 1:
+                # X-basis outcome 1 means Alice sent |0> (bit 0)
                 sifted_sender.append(0)
                 sifted_receiver.append(0)
-
+            # All other cases (outcome 0 in any basis) are inconclusive and discarded
+        
         self.sifted_key = sifted_receiver
         return sifted_sender, sifted_receiver
 
