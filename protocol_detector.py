@@ -72,31 +72,31 @@ class ProtocolDetector:
     
     def detect_from_status_files(self) -> Optional[str]:
         """
-        Detect protocol from existing status files
+        Detect protocol from existing status files using centralized detection
         """
         try:
-            # Check BB84 status file
-            bb84_file = "student_implementation_status.json"
-            if os.path.exists(bb84_file):
-                with open(bb84_file, 'r') as f:
-                    status = json.load(f)
-                    if status.get("protocol") == "bb84":
-                        self.current_protocol = "BB84"
-                        self.detection_method = "status_file_bb84"
-                        return "BB84"
+            # Use centralized protocol detection from QuantumChannel
+            from quantum_network.channel import QuantumChannel
+            from types import SimpleNamespace
             
-            # Check B92 status file
-            b92_file = "student_b92_implementation_status.json"
-            if os.path.exists(b92_file):
-                with open(b92_file, 'r') as f:
-                    status = json.load(f)
-                    if status.get("protocol") == "b92":
-                        self.current_protocol = "B92"
-                        self.detection_method = "status_file_b92"
-                        return "B92"
+            class MockNode:
+                def __init__(self, name):
+                    self.name = name
+            
+            # Create a temporary channel just to use its protocol detection
+            temp_channel = QuantumChannel(
+                MockNode('Alice'), MockNode('Bob'), 
+                length=1.0, loss_per_km=0.1, noise_model='none'
+            )
+            
+            detected_protocol = temp_channel.detect_active_protocol()
+            if detected_protocol in ["BB84", "B92"]:
+                self.current_protocol = detected_protocol
+                self.detection_method = f"centralized_status_{detected_protocol.lower()}"
+                return detected_protocol
                         
         except Exception as e:
-            print(f"⚠️ Error detecting from status files: {e}")
+            print(f"⚠️ Error using centralized protocol detection: {e}")
         
         return None
     

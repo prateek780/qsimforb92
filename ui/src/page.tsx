@@ -98,9 +98,11 @@ export default function QuantumNetworkSimulator() {
     triggerLabCheck();
     if (!isSimulationRunning) {
       api.getSimulationStatus().then((status) => {
-        if (status.is_running) {
+        if (status && status.is_running) {
           setIsSimulationRunning(true);
         }
+      }).catch((error) => {
+        console.warn('Failed to get simulation status:', error);
       });
       return
     }

@@ -811,16 +811,27 @@ def run_complete_quantum_simulation():
     
     return success_level >= 1
 
-def run_complete_quantum_simulation_with_instances(alice_instance, bob_instance):
+def run_complete_quantum_simulation_with_instances(alice_instance, bob_instance, protocol="bb84"):
     """
     🚀 COMPLETE QUANTUM-CLASSICAL NETWORK SIMULATION WITH INSTANCES
     
     This version accepts alice and bob instances directly to avoid global scope issues.
+    Supports both BB84 and B92 protocols.
     """
     
-    print("🌐 COMPLETE QUANTUM NETWORK SIMULATION")
-    print("🎓 Using YOUR vibe-coded BB84 implementation!")
-    print("🔧 FIXES: Enhanced bridge + completion signals + proper host attachment")
+    # Detect protocol from instance types
+    if hasattr(alice_instance, 'b92_send_qubits') and hasattr(bob_instance, 'b92_process_received_qbit'):
+        detected_protocol = "b92"
+        print("🌐 COMPLETE QUANTUM NETWORK SIMULATION")
+        print("🎓 Using YOUR vibe-coded B92 implementation!")
+        print("🔧 FIXES: Enhanced bridge + completion signals + proper host attachment")
+    else:
+        detected_protocol = "bb84"
+        print("🌐 COMPLETE QUANTUM NETWORK SIMULATION")
+        print("🎓 Using YOUR vibe-coded BB84 implementation!")
+        print("🔧 FIXES: Enhanced bridge + completion signals + proper host attachment")
+    
+    print(f"🔍 Detected protocol: {detected_protocol.upper()}")
     print("=" * 80)
     
     # Ensure we can import from current directory  

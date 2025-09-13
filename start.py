@@ -12,7 +12,7 @@ os.environ["REDIS_PORT"] = "11509"
 os.environ["REDIS_USERNAME"] = "default"
 os.environ["REDIS_PASSWORD"] = "aDevCXKeLli9kldGJccV15D1yS93Oyvd"
 os.environ["REDIS_DB"] = "0"
-os.environ["REDIS_SSL"] = "False"
+os.environ["REDIS_SSL"] = "false"
 
 # Set Redis URL for redis_om before any imports
 os.environ["REDIS_OM_URL"] = "redis://default:aDevCXKeLli9kldGJccV15D1yS93Oyvd@redis-11509.c90.us-east-1-3.ec2.redns.redis-cloud.com:11509/0"

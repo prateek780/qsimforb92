@@ -362,36 +362,31 @@ class SimulationManager:
             print("❌ No simulation world found")
             return
         
-        print("🔍 Checking for BB84 implementation...")
-        # Check for BB84 implementation first (priority)
-        if os.path.exists("student_implementation_status.json"):
-            try:
-                with open("student_implementation_status.json", "r") as f:
-                    status = json.load(f)
-                print(f"🔍 BB84 status file contents: {status}")
-                if status.get("student_implementation_ready") and status.get("protocol") == "bb84":
-                    print("🔹 BB84 student implementation detected, attaching to hosts...")
-                    self._attach_bb84_student_impl_to_hosts()
-                    return
-                else:
-                    print(f"❌ BB84 status file found but not ready or wrong protocol: ready={status.get('student_implementation_ready')}, protocol={status.get('protocol')}")
-            except Exception as e:
-                print(f"Error reading BB84 status file: {e}")
+        # Use centralized protocol detection from QuantumChannel
+        from quantum_network.channel import QuantumChannel
+        from types import SimpleNamespace
+        
+        class MockNode:
+            def __init__(self, name):
+                self.name = name
+        
+        # Create a temporary channel just to use its protocol detection
+        temp_channel = QuantumChannel(
+            MockNode('Alice'), MockNode('Bob'), 
+            length=1.0, loss_per_km=0.1, noise_model='none'
+        )
+        
+        detected_protocol = temp_channel.detect_active_protocol()
+        print(f"🔍 Detected protocol: {detected_protocol}")
+        
+        if detected_protocol == "BB84":
+            print("🔹 BB84 protocol detected, attaching BB84 implementation...")
+            self._attach_bb84_student_impl_to_hosts()
+        elif detected_protocol == "B92":
+            print("🔹 B92 protocol detected, attaching B92 implementation...")
+            self._attach_b92_student_impl_to_hosts()
         else:
-            print("❌ BB84 status file not found")
-        
-        # Fallback to B92 implementation (only if not disabled)
-        if os.path.exists("student_b92_implementation_status.json") and not os.path.exists("student_b92_implementation_status.json.disabled"):
-            try:
-                with open("student_b92_implementation_status.json", "r") as f:
-                    status = json.load(f)
-                if status.get("student_implementation_ready"):
-                    print("🔹 B92 student implementation detected, attaching to hosts...")
-                    self._attach_b92_student_impl_to_hosts()
-                    return
-            except Exception as e:
-                print(f"Error reading B92 status file: {e}")
-        
+            print("❌ No valid protocol detected, skipping student implementation attachment")
         # Legacy fallback for old BB84 implementations without protocol field
         status_file = "student_implementation_status.json"
         module_name = class_name = None
@@ -467,7 +462,7 @@ class SimulationManager:
         try:
             # Import B92 student implementation
             from student_b92_impl import StudentB92Host
-            from enhanced_student_bridge_b92 import EnhancedStudentB92ImplementationBridge
+            from enhanced_student_bridge_b92 import EnhancedStudentImplementationBridgeB92
             
             print("🔹 Attaching B92 student implementation to hosts...")
             print(f"🔹 Simulation world: {self.simulation_world}")
@@ -477,14 +472,11 @@ class SimulationManager:
                 print(f"🔹 Processing network: {network}")
                 for node in getattr(network, 'nodes', []) or []:
                     print(f"🔹 Processing node: {node} (class: {node.__class__})")
-                    if hasattr(node, '__class__') and 'InteractiveQuantumHostB92' in str(node.__class__):
+                    if hasattr(node, '__class__') and 'InteractiveQuantumHostB92' in str(node.__class__.__name__):
                         print(f"🔹 Attaching B92 implementation to {node.name}")
                         
                         # Create B92 bridge with student implementations
-                        bridge = EnhancedStudentB92ImplementationBridge(
-                            alice_name="Alice",
-                            bob_name="Bob"
-                        )
+                        bridge = EnhancedStudentImplementationBridgeB92()
                         bridge.host = node
                         
                         # Attach to host

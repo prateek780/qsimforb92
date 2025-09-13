@@ -1,18 +1,12 @@
 """
-Interactive Quantum Host for B92 Student Learning
-===============================================
+Interactive Quantum Host for Student Learning - B92 VERSION
+===========================================================
 
-This module provides an interactive quantum host implementation specifically for B92
-quantum key distribution protocol. It uses the student's B92 implementation from
-student_b92_impl.py through the enhancedb92_bridge.py.
+This module provides an interactive quantum host implementation that students
+can modify and extend for learning quantum networking protocols. It replaces
+the hardcoded host.py with a more educational and flexible approach.
 
-This host REQUIRES students to implement B92 quantum protocols before simulation can run.
-The simulation will only work after students have "vibe coded" their B92 algorithms.
-
-Students must implement:
-- B92 quantum key distribution
-- Quantum state preparation and measurement
-- Custom quantum networking protocols
+WORKING B92 VERSION - MIRRORS BB84 STRUCTURE
 """
 
 from __future__ import annotations
@@ -91,7 +85,6 @@ class InteractiveQuantumHostB92(QuantumNode):
         self.entangled_qubit: 'qt.Qobj' | None = None
         self.entanglement_partner_address: str | None = None
         self.entangled_channel: QuantumChannel | None = None
-        self.entangled_pairs = []
         
         # Callback functions (initialize attributes to safe defaults)
         self.send_classical_data = send_classical_fn if send_classical_fn else (lambda message: None)
@@ -262,14 +255,14 @@ class InteractiveQuantumHostB92(QuantumNode):
         
         self._qubit_receive_count += 1
         
-        # Use a simpler but more effective qubit identifier
-        qubit_id = f"{id(qbit)}_{from_channel}"
+        # Use a more specific qubit identifier that includes the qubit state and receive count
+        qubit_id = f"{qbit}_{from_channel}_{self._qubit_receive_count}"
         if qubit_id in self._processed_qubits:
             print(f"⚠️ {self.name}: Qubit already processed, skipping (receive count: {self._qubit_receive_count})")
             return
         
         # Limit total qubit receives to prevent infinite loops
-        if self._qubit_receive_count > 20:  # Reasonable limit for B92 protocol
+        if self._qubit_receive_count > 32:  # Allow for 16 qubits + some duplicates for B92 protocol
             print(f"⚠️ {self.name}: Too many qubit receives ({self._qubit_receive_count}), stopping to prevent infinite loop")
             return
         
@@ -281,6 +274,7 @@ class InteractiveQuantumHostB92(QuantumNode):
             self._processed_qubits = set(list(self._processed_qubits)[-25:])
         
         # Process the received qubit using B92 protocol
+        print(f"DEBUG: Processing qubit {self._qubit_receive_count}: {qbit} from {from_channel}")
         if self.enhanced_bridge and hasattr(self.enhanced_bridge, 'b92_process_received_qbit'):
             self.enhanced_bridge.b92_process_received_qbit(qbit, from_channel)
         elif hasattr(self, 'b92_process_received_qbit'):
@@ -302,6 +296,8 @@ class InteractiveQuantumHostB92(QuantumNode):
         
         # Use enhanced bridge if available - let bridge handle all event logging
         if self.enhanced_bridge and hasattr(self.enhanced_bridge, 'b92_send_qubits'):
+            # Notify all other B92 hosts about the expected number of qubits
+            self._notify_expected_qubits(num_qubits)
             return self.enhanced_bridge.b92_send_qubits(num_qubits)
             
         if self.student_implementation and hasattr(self.student_implementation, 'b92_send_qubits'):
@@ -497,7 +493,10 @@ class InteractiveQuantumHostB92(QuantumNode):
                     if hasattr(self, 'b92_sifting'):
                         # Use enhanced bridge if available
                         if self.enhanced_bridge and hasattr(self.enhanced_bridge, 'b92_sifting'):
-                            self.enhanced_bridge.b92_sifting()
+                            # Get Alice's sent bits from the sifting message
+                            alice_sent_bits = message.get('data', [])
+                            print(f"DEBUG: Received Alice's bits for sifting: {alice_sent_bits}")
+                            self.enhanced_bridge.b92_sifting(alice_sent_bits)
                         else:
                             # Call student's b92_sifting with proper parameters
                             if hasattr(self, 'student_implementation') and self.student_implementation:
@@ -508,55 +507,51 @@ class InteractiveQuantumHostB92(QuantumNode):
                                 self.b92_sifting()
                         
                         self._sifting_done = True
+                
+                    # After sifting, trigger error rate estimation
+                    if hasattr(self, 'b92_estimate_error_rate'):
+                        print(f"📊 {self.name}: Triggering error rate estimation after sifting")
+                        print(f"📊 {self.name}: Debug - hasattr shared_bases_indices: {hasattr(self, 'shared_bases_indices')}")
+                        if hasattr(self, 'shared_bases_indices'):
+                            print(f"📊 {self.name}: Debug - shared_bases_indices: {self.shared_bases_indices}")
                         
-                        # After sifting, trigger error rate estimation
-                        if hasattr(self, 'b92_estimate_error_rate'):
-                            print(f"📊 {self.name}: Triggering error rate estimation after sifting")
-                            print(f"📊 {self.name}: Debug - hasattr shared_bases_indices: {hasattr(self, 'shared_bases_indices')}")
-                            if hasattr(self, 'shared_bases_indices'):
-                                print(f"📊 {self.name}: Debug - shared_bases_indices: {self.shared_bases_indices}")
+                        # Create a sample of bits for error estimation
+                        if hasattr(self, 'shared_bases_indices') and self.shared_bases_indices:
+                            sample_size = min(5, len(self.shared_bases_indices))
+                            sample_indices = self.shared_bases_indices[:sample_size]
+                            sample_positions = sample_indices
+                            reference_bits = [self.measurement_outcomes[i] for i in sample_indices if i < len(self.measurement_outcomes)]
                             
-                            # Create a sample of bits for error estimation
-                            if hasattr(self, 'shared_bases_indices') and self.shared_bases_indices:
-                                sample_size = min(5, len(self.shared_bases_indices))
-                                sample_indices = self.shared_bases_indices[:sample_size]
-                                sample_positions = sample_indices
-                                reference_bits = [self.measurement_outcomes[i] for i in sample_indices if i < len(self.measurement_outcomes)]
-                                
-                                print(f"📊 {self.name}: Debug - sample_positions: {sample_positions}, reference_bits: {reference_bits}")
-                                
-                                # Use enhanced bridge if available
-                                if self.enhanced_bridge and hasattr(self.enhanced_bridge, 'b92_estimate_error_rate'):
-                                    self.enhanced_bridge.b92_estimate_error_rate(sample_positions, reference_bits)
-                                else:
-                                    # Call student's b92_estimate_error_rate with proper parameters
-                                    if hasattr(self, 'student_implementation') and self.student_implementation:
-                                        self.student_implementation.b92_estimate_error_rate(sample_positions, reference_bits)
-                                    else:
-                                        self.b92_estimate_error_rate(sample_positions, reference_bits)
-                                
-                                # Send completion message after error estimation
-                                print(f"🎉 {self.name}: B92 protocol completed, sending completion message")
-                                self.send_classical_data({"type": "complete", "protocol": "B92"})
+                            print(f"📊 {self.name}: Debug - sample_positions: {sample_positions}, reference_bits: {reference_bits}")
+                            
+                            # Use enhanced bridge if available - let it handle the error estimation
+                            if self.enhanced_bridge and hasattr(self.enhanced_bridge, 'b92_estimate_error_rate'):
+                                # Create sample as list of tuples for compatibility
+                                sample_data = list(zip(sample_positions, reference_bits))
+                                self.enhanced_bridge.b92_estimate_error_rate(sample_data)
                             else:
-                                print(f"⚠️ {self.name}: No shared bases for error estimation, using fallback")
-                                # Fallback: call error estimation with default parameters
-                                if self.enhanced_bridge and hasattr(self.enhanced_bridge, 'b92_estimate_error_rate'):
-                                    # Create default parameters for enhanced bridge
-                                    default_sample_positions = [0, 1, 2, 3, 4]  # First 5 positions
-                                    default_reference_bits = [0, 1, 0, 1, 0]  # Sample reference bits
-                                    self.enhanced_bridge.b92_estimate_error_rate(default_sample_positions, default_reference_bits)
-                                elif hasattr(self, 'student_implementation') and self.student_implementation:
-                                    # Create default parameters for student implementation
-                                    default_sample_positions = [0, 1, 2, 3, 4]  # First 5 positions
-                                    default_reference_bits = [0, 1, 0, 1, 0]  # Sample reference bits
-                                    self.student_implementation.b92_estimate_error_rate(default_sample_positions, default_reference_bits)
+                                # Call student's b92_estimate_error_rate with proper parameters
+                                if hasattr(self, 'student_implementation') and self.student_implementation:
+                                    self.student_implementation.b92_estimate_error_rate(sample_positions, reference_bits)
                                 else:
-                                    self.b92_estimate_error_rate()
-                                
-                                # Send completion message after error estimation
-                                print(f"🎉 {self.name}: B92 protocol completed (fallback), sending completion message")
-                                self.send_classical_data({"type": "complete", "protocol": "B92"})
+                                    self.b92_estimate_error_rate(sample_positions, reference_bits)
+                            
+                            # Send completion message after error estimation
+                            print(f"🎉 {self.name}: B92 protocol completed, sending completion message")
+                            self.send_classical_data({"type": "complete", "protocol": "B92"})
+                        else:
+                            print(f"⚠️ {self.name}: No shared bases for error estimation - using student implementation")
+                            # Use student implementation even with no shared bases
+                            if self.enhanced_bridge and hasattr(self.enhanced_bridge, 'b92_estimate_error_rate'):
+                                self.enhanced_bridge.b92_estimate_error_rate([])
+                            elif hasattr(self, 'student_implementation') and self.student_implementation:
+                                self.student_implementation.b92_estimate_error_rate([], [])
+                            else:
+                                self.b92_estimate_error_rate([], [])
+                            
+                            # Send completion message after error estimation
+                            print(f"🎉 {self.name}: B92 protocol completed, sending completion message")
+                            self.send_classical_data({"type": "complete", "protocol": "B92"})
                 except Exception as e:
                     print(f"❌ Error in B92 sifting: {e}")
             elif message_type == "estimate_error_rate":
@@ -578,6 +573,18 @@ class InteractiveQuantumHostB92(QuantumNode):
                 if hasattr(self, 'enhanced_bridge') and self.enhanced_bridge and hasattr(self.enhanced_bridge, 'b92_complete'):
                     self.enhanced_bridge.b92_complete()
 
+    def _notify_expected_qubits(self, num_qubits):
+        """Notify all B92 hosts about the expected number of qubits"""
+        try:
+            # Find all B92 hosts in the network and notify them
+            if hasattr(self, 'network') and self.network:
+                for node in self.network.nodes:
+                    if hasattr(node, 'enhanced_bridge') and node.enhanced_bridge and hasattr(node.enhanced_bridge, 'set_expected_bits'):
+                        node.enhanced_bridge.set_expected_bits(num_qubits)
+                        print(f"🔔 {self.name}: Notified {node.name} about expected {num_qubits} qubits")
+        except Exception as e:
+            print(f"⚠️ {self.name}: Error notifying expected qubits: {e}")
+    
     def send_classical_data(self, message):
         """Send classical data to other hosts"""
         print(f"📤 {self.name}: Sending classical data: {message}")

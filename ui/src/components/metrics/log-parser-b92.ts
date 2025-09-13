@@ -1,40 +1,187 @@
 import { LogI, LogLevel } from "./simulation-logs";
 
 /**
- * Formats a Date object into HH:MM:SS string format.
- * @param date The Date object to format.
- * @returns The formatted time string.
+ * Convert a simulation event to a log entry for B92 protocol
+ * This parser handles B92-specific events from the enhanced B92 bridge
  */
-function formatTime(date: Date): string {
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
-}
+export function convertEventToLogB92(eventData: any): any {
+    if (!eventData) return null;
 
-/**
- * Converts a raw websocket event object into a human-readable LogI object for B92 protocol.
- * @param eventData The raw event object received from the websocket.
- * @returns A LogI object representing the formatted log message.
- */
-export function convertB92EventToLog(eventData: any): LogI {
-    const time = formatTime(new Date());
-    let level: LogLevel = LogLevel.PROTOCOL; // Default to a standard protocol-level log
-    let source = 'B92 Simulation'; // Default source if node is not available
-    let message = 'Received B92 data in unhandled format.';
+    let level = LogLevel.STORY;
+    let source = 'Unknown';
+    let message = 'Received data in unhandled format.';
+
+    // Filter out irrelevant classical network logs when B92 is running
+    if (eventData?.data?.type && eventData.data.type.startsWith('student_b92')) {
+        // Prioritize B92 events - they are more important
+    } else if (eventData?.message && eventData.message.includes('Received data in unhandled format')) {
+        // Skip unhandled format messages when B92 is active
+        return null;
+    }
 
     try {
         // Check if it's a simulation_event structure (has event_type and node)
         if (typeof eventData === 'object' && eventData !== null && eventData.event_type !== undefined && eventData.node !== undefined) {
 
             source = eventData.node || source;
-            const eventType = eventData.event_type;
+            // The actual event type is in data.type, not event_type
+            const eventType = eventData.data?.type || eventData.event_type;
             const eventDetails = eventData.data; // Specific details for this event type
+
+            // Handle B92 events based on message content since bridge doesn't use type parameter
+            if (eventDetails?.message) {
+                const msg = eventDetails.message;
+                
+                if (msg.includes('STUDENT B92: Starting with') && msg.includes('qubits using your code')) {
+                    level = LogLevel.PROTOCOL;
+                    const numQubits = eventDetails?.num_qubits || 0;
+                    message = `🔬 Student B92 implementation: Starting protocol with ${numQubits} qubits`;
+                } else if (msg.includes('STUDENT ALICE data: Generated') && msg.includes('bits and') && msg.includes('bases')) {
+                    level = LogLevel.PROTOCOL;
+                    message = `🔬 Student Alice data: Generated ${eventDetails?.message?.match(/(\d+)/g)?.[0] || 0} bits and ${eventDetails?.message?.match(/(\d+)/g)?.[1] || 0} bases`;
+                } else if (msg.includes('STUDENT ALICE: Prepared') && msg.includes('qubits using b92_send_qubits')) {
+                    level = LogLevel.PROTOCOL;
+                    const qubitsPrepared = eventDetails?.message?.match(/(\d+)/g)?.[0] || 0;
+                    message = `🔬 Student Alice: Prepared ${qubitsPrepared} qubits using b92_send_qubits() [b92_send_qubits] (${qubitsPrepared} qubits)`;
+                } else if (msg.includes('STUDENT ALICE: Prepared qubit') && msg.includes('bit') && msg.includes('->')) {
+                    level = LogLevel.PROTOCOL;
+                    message = `🔬 Student Alice: ${msg.split('STUDENT ALICE: ')[1]} [b92_prepare_qubit]`;
+                } else if (msg.includes('STUDENT BOB: Measured qubit') && msg.includes('outcome') && msg.includes('basis')) {
+                    level = LogLevel.PROTOCOL;
+                    message = `🔬 Student Bob: ${msg.split('STUDENT BOB: ')[1]} [b92_measure_qubit]`;
+                } else if (msg.includes('STUDENT B92: Sending') && msg.includes('encoded qubits from Alice')) {
+                    level = LogLevel.STORY;
+                    const qubitsSent = eventDetails?.qubits_sent || 0;
+                    message = `🔬 Student B92: Sending ${qubitsSent} encoded qubits from Alice's b92_send_qubits() through quantum channel (${qubitsSent} qubits) - Sample: [|0>, |+>, |0>...]`;
+                } else if (msg.includes('STUDENT BOB: Received qubit') && msg.includes('!')) {
+                    level = LogLevel.PROTOCOL;
+                    const received = eventDetails?.qubits_received || 0;
+                    const total = eventDetails?.total_expected || 0;
+                    message = `🔬 Student Bob: Received qubit ${received}/${total}!`;
+                } else if (msg.includes('STUDENT BOB: Received all') && msg.includes('qubits, ready for b92_sifting')) {
+                    level = LogLevel.PROTOCOL;
+                    const received = eventDetails?.message?.match(/(\d+)/g)?.[0] || 0;
+                    message = `🔬 Student Bob: Received all ${received} qubits, ready for b92_sifting() [b92_sifting]`;
+                } else if (msg.includes('STUDENT BOB: Starting sifting process')) {
+                    level = LogLevel.PROTOCOL;
+                    message = `🔬 Student Bob: Starting sifting process with Alice's bits [b92_sifting]`;
+                } else if (msg.includes('STUDENT BOB b92_sifting(): Found') && msg.includes('sifted bits out of')) {
+                    level = LogLevel.PROTOCOL;
+                    const siftedBits = eventDetails?.shared_bases || 0;
+                    const totalBits = eventDetails?.message?.match(/(\d+)/g)?.[1] || 0;
+                    const efficiency = eventDetails?.efficiency || 0;
+                    message = `🔬 Student Bob b92_sifting(): Found ${siftedBits} sifted bits out of ${totalBits} (Efficiency: ${efficiency.toFixed(1)}%) [b92_sifting] (${siftedBits} sifted bits) (${efficiency.toFixed(1)}% efficiency)`;
+                } else if (msg.includes('STUDENT BOB: Sifting completed')) {
+                    level = LogLevel.PROTOCOL;
+                    const siftedBits = eventDetails?.shared_bases || 0;
+                    message = `🔬 Student Bob: Sifting completed - found ${siftedBits} sifted bits [b92_sifting]`;
+                } else if (msg.includes('STUDENT BOB: Starting error rate estimation process')) {
+                    level = LogLevel.PROTOCOL;
+                    message = `🔬 Student Bob: Starting error rate estimation process [b92_estimate_error_rate]`;
+                } else if (msg.includes('STUDENT BOB b92_estimate_error_rate():') && msg.includes('error rate') && msg.includes('errors) using student implementation')) {
+                    level = LogLevel.PROTOCOL;
+                    const errorRate = eventDetails?.error_rate || 0;
+                    const errorCount = eventDetails?.message?.match(/(\d+)\/(\d+)/)?.[0] || '0/0';
+                    message = `🔬 Student Bob b92_estimate_error_rate(): ${(errorRate * 100).toFixed(1)}% error rate (${errorCount} errors) using student implementation [b92_estimate_error_rate] (${(errorRate * 100).toFixed(1)}% error rate) (${errorCount} errors)`;
+                } else if (msg.includes('STUDENT BOB: Error rate') && msg.includes('using b92_estimate_error_rate')) {
+                    level = LogLevel.PROTOCOL;
+                    const errorRate = eventDetails?.error_rate || 0;
+                    message = `🔬 Student Bob: Error rate ${(errorRate * 100).toFixed(1)}% using b92_estimate_error_rate()!`;
+                } else if (msg.includes('STUDENT BOB: WARNING - Alice has no sent_bits data for sifting')) {
+                    level = LogLevel.WARNING;
+                    message = `⚠️ Student Bob: WARNING - Alice has no sent_bits data for sifting [b92_sifting]`;
+                } else if (msg.includes('STUDENT BOB: WARNING - Bob has no received_measurements data for sifting')) {
+                    level = LogLevel.WARNING;
+                    message = `⚠️ Student Bob: WARNING - Bob has no received_measurements data for sifting [b92_sifting]`;
+                } else if (msg.includes('STUDENT BOB: WARNING - No data available for error estimation')) {
+                    level = LogLevel.WARNING;
+                    message = `⚠️ Student Bob: WARNING - No data available for error estimation [b92_estimate_error_rate]`;
+                } else if (msg.includes('WARNING: Bridge not attached to host')) {
+                    level = LogLevel.WARNING;
+                    message = `⚠️ Warning: Bridge not attached to host`;
+                } else if (msg.includes('WARNING: Alice has no sent_bits data - using student implementation with empty data')) {
+                    level = LogLevel.WARNING;
+                    message = `⚠️ Warning: Alice has no sent_bits data - using student implementation with empty data`;
+                } else if (msg.includes('WARNING: Bob has no received_measurements data - using student implementation with empty data')) {
+                    level = LogLevel.WARNING;
+                    message = `⚠️ Warning: Bob has no received_measurements data - using student implementation with empty data`;
+                } else if (msg.includes('WARNING: No data available for error estimation - using student implementation with empty data')) {
+                    level = LogLevel.WARNING;
+                    message = `⚠️ Warning: No data available for error estimation - using student implementation with empty data`;
+                } else if (msg.includes('DEBUG: Alice sent_bits after b92_send_qubits:')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Alice sent bits: ${msg.split(': ')[1]}`;
+                } else if (msg.includes('DEBUG: Alice qubits prepared:')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Alice qubits prepared: ${msg.split(': ')[1]}`;
+                } else if (msg.includes('DEBUG: Bob received_measurements after processing:')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Bob received measurements: ${msg.split(': ')[1]}`;
+                } else if (msg.includes('DEBUG: Bob measurement_outcomes:')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Bob measurement outcomes: ${msg.split(': ')[1]}`;
+                } else if (msg.includes('DEBUG: Bob received_bases:')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Bob received bases: ${msg.split(': ')[1]}`;
+                } else if (msg.includes('DEBUG: Sifting result - Alice:')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Sifting result - Alice: ${msg.split('Alice: ')[1].split(', Bob:')[0]}, Bob: ${msg.split('Bob: ')[1]}`;
+                } else if (msg.includes('DEBUG: Bob sifted_key:')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Bob sifted key: ${msg.split(': ')[1]}`;
+                } else if (msg.includes('DEBUG: their_bits_sample:')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Their bits sample: ${msg.split(': ')[1]}`;
+                } else if (msg.includes('DEBUG: Using Alice\'s data from sifting message:')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Using Alice's data from sifting message: ${msg.split(': ')[1]}`;
+                } else if (msg.includes('DEBUG: Using Alice\'s data from student implementation:')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Using Alice's data from student implementation: ${msg.split(': ')[1]}`;
+                } else if (msg.includes('DEBUG: Using Alice\'s data from host.basis_choices:')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Using Alice's data from host.basis_choices: ${msg.split(': ')[1]}`;
+                } else if (msg.includes('DEBUG: host.basis_choices contains bases, not bits:')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: host.basis_choices contains bases, not bits: ${msg.split(': ')[1]}`;
+                } else if (msg.includes('DEBUG: Set expected_bits to')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Set expected bits to: ${msg.split('to ')[1]}`;
+                } else if (msg.includes('DEBUG: Processing qubit')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Processing qubit: ${msg.split('DEBUG: ')[1]}`;
+                } else if (msg.includes('DEBUG: Alice prepared qubit')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Alice prepared qubit: ${msg.split('DEBUG: ')[1]}`;
+                } else if (msg.includes('DEBUG: Bob measured qubit')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Bob measured qubit: ${msg.split('DEBUG: ')[1]}`;
+                } else if (msg.includes('DEBUG: Sending Alice\'s bits to Bob for sifting:')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Sending Alice's bits to Bob for sifting: ${msg.split(': ')[1]}`;
+                } else if (msg.includes('DEBUG: Received Alice\'s bits for sifting:')) {
+                    level = LogLevel.DEBUG;
+                    message = `🐛 Debug: Received Alice's bits for sifting: ${msg.split(': ')[1]}`;
+                } else if (msg.includes('B92 QKD protocol completed successfully using student')) {
+                    level = LogLevel.STORY;
+                    const errorRate = eventDetails?.error_rate || 0;
+                    const sharedBases = eventDetails?.shared_bases || 0;
+                    message = `🔬 B92 QKD protocol completed successfully using student's code! (${(errorRate * 100).toFixed(1)}% error rate) (${sharedBases} sifted bits)`;
+                } else if (msg.includes('B92 PROTOCOL COMPLETE using student')) {
+                    level = LogLevel.PROTOCOL;
+                    const errorRate = eventDetails?.error_rate || 0;
+                    const sharedBases = eventDetails?.shared_bases || 0;
+                    message = `🔬 Student B92 Implementation Complete! All methods executed successfully: b92_send_qubits(), b92_process_received_qbit(), b92_sifting(), b92_estimate_error_rate() (${(errorRate * 100).toFixed(1)}% error rate) (${sharedBases} sifted bits)`;
+                } else if (msg.includes('B92 Protocol Complete! All student methods executed successfully')) {
+                    level = LogLevel.PROTOCOL;
+                    message = `🔬 B92 Protocol Complete! All student methods executed successfully [b92_complete]`;
+                }
+            }
 
             switch (eventType) {
                 case 'transmission_started':
                     level = LogLevel.NETWORK; // Low-level network detail
-                    message = `B92 Transmission started.`;
+                    message = `Transmission started.`;
                     if (eventDetails) {
                         message += ` (delay: ${eventDetails.delay?.toFixed(3)}s, bandwidth: ${eventDetails.bandwidth})`;
                     }
@@ -42,287 +189,231 @@ export function convertB92EventToLog(eventData: any): LogI {
 
                 case 'data_sent':
                     level = LogLevel.STORY; // Standard protocol step
-                    message = `B92 Data sent.`;
+                    message = `Sent data.`;
                     if (eventDetails?.destination?.name && eventDetails.data !== undefined) {
-                        message = `Sent B92 data to ${eventDetails.destination.name}: "${sliceData(eventDetails.data)}".`;
+                        message = `Sent data to ${eventDetails.destination.name}: "${sliceData(eventDetails.data)}".`;
                     } else if (eventDetails?.message) {
                         // Handle student B92 qubit transmission logs
                         message = eventDetails.message;
-                        if (eventDetails.qubits_sent) {
-                            message += ` (${eventDetails.qubits_sent} qubits)`;
-                        }
-                        if (eventDetails.student_qubits) {
-                            message += ` - Sample: [${eventDetails.student_qubits.slice(0, 3).join(', ')}...]`;
-                        }
                     }
-                    break;
-
-                case 'packet_delivered':
-                    level = LogLevel.NETWORK; // Low-level network detail
-                    message = `B92 Packet delivered.`;
-                    if (eventDetails?.destination !== undefined) {
-                        message = `B92 Packet delivered to ${eventDetails.destination}.`;
-                        if (eventDetails.packet_id) {
-                            message += ` (ID: ${eventDetails.packet_id.substring(0, 6)}...)`;
-                        }
-                        if (eventDetails.delay !== undefined) {
-                            message += ` (Delay: ${eventDetails.delay?.toFixed(3)}s)`;
-                        }
-                    }
-                    break;
-
-                case 'packet_received':
-                    level = LogLevel.NETWORK; // Standard protocol step
-                    message = `B92 Packet received.`;
-                    if (eventDetails?.packet) {
-                        const packet = eventDetails.packet;
-                        // Extract simple type name from "<class 'module.Class'>" format
-                        const packetTypeMatch = packet.type?.match(/<class\s*'[^']*\.([^']+)'\s*>/);
-                        const packetType = packetTypeMatch ? packetTypeMatch[1] : 'Unknown Packet';
-                        const packetFrom = packet.from || 'Unknown Sender';
-
-                        message = `Received ${packetType} from ${packetFrom}.`;
-
-                        // Specific handling for B92 QKD data strings (Python dict string)
-                        if (packetType === 'QKDTransmissionPacket' && typeof packet.data === 'string') {
-                            // Use regex to safely extract the 'type' field from the Python dict string
-                            const qkdTypeMatch = packet.data.match(/'type'\s*:\s*'([^']+)'/);
-                            if (qkdTypeMatch && qkdTypeMatch[1]) {
-                                message += ` (B92 QKD Type: ${qkdTypeMatch[1]}).`;
-                            }
-                        } else if (packetType === 'ClassicDataPacket' && typeof packet.data === 'string' && !packet.data.startsWith('bytearray')) {
-                            // Include classic data unless it's the bytearray representation
-                            message += ` Data: "${sliceData(packet.data)}".`;
-                        }
-                    }
-                    break;
-
-                case 'packet_lost':
-                    level = LogLevel.ERROR;
-                    message = `B92 Packet lost.`;
-                    break;
-
-                case 'qkd_initiated':
-                    level = LogLevel.STORY; // A major, high-level action
-                    message = `Initiated B92 QKD.`;
-                    if (eventDetails?.with_adapter?.name) {
-                        message = `Initiated B92 QKD with ${eventDetails.with_adapter.name}.`;
-                    } else if (eventDetails?.message) {
-                        // Handle student B92 implementation logs
-                        message = eventDetails.message;
-                        if (eventDetails.protocol) {
-                            message += ` (${eventDetails.protocol})`;
-                        }
-                        if (eventDetails.num_qubits) {
-                            message += ` - ${eventDetails.num_qubits} qubits`;
-                        }
-                    }
-                    break;
-
-                case 'shared_key_generated':
-                    level = LogLevel.STORY;
-                    if (eventDetails?.message) {
-                        // Handle student B92 completion logs
-                        message = eventDetails.message;
-                        if (eventDetails.error_rate !== undefined) {
-                            message += ` (${(eventDetails.error_rate * 100).toFixed(1)}% error rate)`;
-                        }
-                        if (eventDetails.shared_bases !== undefined) {
-                            message += ` (${eventDetails.shared_bases} sifted bits)`;
-                        }
-                    } else if (eventDetails?.key?.length) {
-                        message = `${eventDetails.key.length} bit B92 shared key generated for encryption: ${sliceData(eventDetails.key)}`;
-                    } else {
-                        message = 'B92 Shared key generated.';
-                    }
-                    break;
-
-                case 'data_encrypted':
-                    level = LogLevel.STORY;
-                    message = `B92 Data encrypted using ${eventDetails.algorithm} algorithm. Cipher: ${sliceData(eventDetails.cipher)}`;
-                    break;
-
-                case 'data_decrypted':
-                    level = LogLevel.STORY;
-                    message = `B92 Data decrypted using ${eventDetails.algorithm} algorithm. Cipher: ${sliceData(eventDetails.data)}`;
                     break;
 
                 case 'data_received':
-                    level = LogLevel.NETWORK;
-                    message = `B92 Data received.`;
-                    if (eventDetails) {
-                        if (eventDetails.message?.type) {
-                            message = `Received B92 message (Type: ${eventDetails.message.type})`;
-                        } else if (eventDetails.data !== undefined && typeof eventDetails.data === 'string' && !eventDetails.data.startsWith('bytearray')) {
-                            // Handle "Hello World!" case etc. (classic data)
-                            message = `Received B92 data: "${sliceData(eventDetails.data)}".`;
-                        } else if (eventDetails.packet) {
-                            // Sometimes this event carries packet info too
-                            const packet = eventDetails.packet;
-                            const packetTypeMatch = packet.type?.match(/<class\s*'[^']*\.([^']+)'\s*>/);
-                            const packetType = packetTypeMatch ? packetTypeMatch[1] : 'Unknown Packet';
-                            const packetFrom = packet.from || 'Unknown Sender';
-                            message = `Received B92 packet data (${packetType} from ${packetFrom})`;
-                        } else if (eventDetails.message && eventDetails.student_method) {
-                            // Handle student B92 qubit reception logs
-                            message = eventDetails.message;
-                            if (eventDetails.student_method) {
-                                message += ` (${eventDetails.student_method})`;
-                            }
-                        }
+                    level = LogLevel.STORY; // Standard protocol step
+                    message = `Received data.`;
+                    if (eventDetails?.source?.name && eventDetails.data !== undefined) {
+                        message = `Received data from ${eventDetails.source.name}: "${sliceData(eventDetails.data)}".`;
+                    } else if (eventDetails?.message) {
+                        // Handle student B92 qubit reception logs
+                        message = eventDetails.message;
                     }
                     break;
 
-                case 'classical_data_received':
-                    level = LogLevel.STORY;
-                    message = `B92 Data received at destination: "${sliceData(eventDetails.data)}"`;
-                    break;
-
-                case 'qubit_lost':
-                    level = LogLevel.ERROR;
-                    message = `B92 Qubit lost during transmission.`;
-                    break;
-
-                case 'info':
-                    const infoType = eventData.type ?? 'info';
-
-                    switch (infoType) {
-                        case 'packet_fragmented':
-                            level = LogLevel.NETWORK;
-                            message = eventDetails.message || 'B92 Packet fragmented because of mtu limit.'
-                            break
-                        case 'fragment_received':
-                            level = LogLevel.NETWORK;
-                            message = eventDetails.message || `B92 Fragment received.`
-                            break
-                        case 'fragment_reassembled':
-                            level = LogLevel.NETWORK;
-                            message = eventDetails.message || 'B92 Fragment reassembled.'
-                            break
-                        default:
-                            // Handle student B92 implementation logs
-                            if (eventDetails?.message) {
-                                level = LogLevel.PROTOCOL; // Student implementation details
-                                message = eventDetails.message;
-                                
-                                // Add additional context for student B92 logs
-                                if (eventDetails.student_method) {
-                                    message += ` [${eventDetails.student_method}]`;
-                                }
-                                if (eventDetails.qubits_prepared) {
-                                    message += ` (${eventDetails.qubits_prepared} qubits)`;
-                                }
-                                if (eventDetails.shared_bases !== undefined) {
-                                    message += ` (${eventDetails.shared_bases} sifted bits)`;
-                                }
-                                if (eventDetails.efficiency !== undefined) {
-                                    message += ` (${eventDetails.efficiency.toFixed(1)}% efficiency)`;
-                                }
-                                if (eventDetails.error_rate !== undefined) {
-                                    message += ` (${(eventDetails.error_rate * 100).toFixed(1)}% error rate)`;
-                                }
-                                if (eventDetails.errors !== undefined && eventDetails.comparisons !== undefined) {
-                                    message += ` (${eventDetails.errors}/${eventDetails.comparisons} errors)`;
-                                }
-                            } else {
-                                level = LogLevel.PROTOCOL;
-                                message = 'B92 Information event.';
-                            }
-                            break
+                case 'qkd_started':
+                    level = LogLevel.PROTOCOL; // High-level protocol event
+                    message = `QKD protocol started.`;
+                    if (eventDetails?.protocol) {
+                        message = `${eventDetails.protocol.toUpperCase()} QKD protocol started.`;
                     }
+                    break;
 
-                    break
+                case 'qkd_completed':
+                    level = LogLevel.PROTOCOL; // High-level protocol event
+                    message = `QKD protocol completed.`;
+                    if (eventDetails?.key_length) {
+                        message = `QKD protocol completed. Shared key length: ${eventDetails.key_length} bits.`;
+                    }
+                    break;
+
+                case 'quantum_state_prepared':
+                    level = LogLevel.PROTOCOL; // Quantum operation
+                    message = `Quantum state prepared.`;
+                    if (eventDetails?.basis && eventDetails?.bit !== undefined) {
+                        message = `Prepared qubit: bit=${eventDetails.bit}, basis=${eventDetails.basis}.`;
+                    }
+                    break;
+
+                case 'quantum_state_measured':
+                    level = LogLevel.PROTOCOL; // Quantum operation
+                    message = `Quantum state measured.`;
+                    if (eventDetails?.basis && eventDetails?.outcome !== undefined) {
+                        message = `Measured qubit: outcome=${eventDetails.outcome}, basis=${eventDetails.basis}.`;
+                    }
+                    break;
+
+                case 'basis_reconciliation':
+                    level = LogLevel.PROTOCOL; // Protocol step
+                    message = `Basis reconciliation performed.`;
+                    if (eventDetails?.matching_bases !== undefined) {
+                        message = `Basis reconciliation: ${eventDetails.matching_bases} matching bases found.`;
+                    }
+                    break;
+
+                case 'error_rate_estimation':
+                    level = LogLevel.PROTOCOL; // Protocol step
+                    message = `Error rate estimation performed.`;
+                    if (eventDetails?.error_rate !== undefined) {
+                        message = `Error rate estimation: ${(eventDetails.error_rate * 100).toFixed(2)}% error rate.`;
+                    }
+                    break;
+
+                case 'key_extraction':
+                    level = LogLevel.PROTOCOL; // Protocol step
+                    message = `Shared key extracted.`;
+                    if (eventDetails?.key_length) {
+                        message = `Shared key extracted: ${eventDetails.key_length} bits.`;
+                    }
+                    break;
+
+                case 'eavesdropping_detected':
+                    level = LogLevel.WARN; // Security warning
+                    message = `Eavesdropping detected!`;
+                    if (eventDetails?.error_rate !== undefined) {
+                        message = `Eavesdropping detected! Error rate: ${(eventDetails.error_rate * 100).toFixed(2)}%.`;
+                    }
+                    break;
+
+                case 'quantum_channel_established':
+                    level = LogLevel.NETWORK; // Network event
+                    message = `Quantum channel established.`;
+                    if (eventDetails?.channel_id) {
+                        message = `Quantum channel ${eventDetails.channel_id} established.`;
+                    }
+                    break;
+
+                case 'quantum_channel_lost':
+                    level = LogLevel.WARN; // Network warning
+                    message = `Quantum channel lost.`;
+                    if (eventDetails?.channel_id) {
+                        message = `Quantum channel ${eventDetails.channel_id} lost.`;
+                    }
+                    break;
+
+                case 'entanglement_established':
+                    level = LogLevel.PROTOCOL; // Quantum entanglement
+                    message = `Quantum entanglement established.`;
+                    if (eventDetails?.partner) {
+                        message = `Quantum entanglement established with ${eventDetails.partner}.`;
+                    }
+                    break;
+
+                case 'entanglement_lost':
+                    level = LogLevel.WARN; // Entanglement warning
+                    message = `Quantum entanglement lost.`;
+                    if (eventDetails?.partner) {
+                        message = `Quantum entanglement with ${eventDetails.partner} lost.`;
+                    }
+                    break;
+
+                case 'repeater_operation':
+                    level = LogLevel.NETWORK; // Repeater operation
+                    message = `Quantum repeater operation.`;
+                    if (eventDetails?.operation) {
+                        message = `Quantum repeater: ${eventDetails.operation}.`;
+                    }
+                    break;
+
+                case 'protocol_error':
+                    level = LogLevel.ERROR; // Protocol error
+                    message = `Protocol error occurred.`;
+                    if (eventDetails?.error_message) {
+                        message = `Protocol error: ${eventDetails.error_message}.`;
+                    }
+                    break;
+
+                case 'security_breach':
+                    level = LogLevel.ERROR; // Security error
+                    message = `Security breach detected!`;
+                    if (eventDetails?.breach_type) {
+                        message = `Security breach: ${eventDetails.breach_type}.`;
+                    }
+                    break;
+
+                // B92 specific events
+                case 'b92_qubit_preparation':
+                    level = LogLevel.PROTOCOL;
+                    message = `B92 qubit prepared.`;
+                    if (eventDetails?.bit !== undefined) {
+                        message = `B92 qubit prepared: bit=${eventDetails.bit}.`;
+                    }
+                    break;
+
+                case 'b92_qubit_measurement':
+                    level = LogLevel.PROTOCOL;
+                    message = `B92 qubit measured.`;
+                    if (eventDetails?.outcome !== undefined && eventDetails?.basis) {
+                        message = `B92 qubit measured: outcome=${eventDetails.outcome}, basis=${eventDetails.basis}.`;
+                    }
+                    break;
+
+                case 'b92_sifting':
+                    level = LogLevel.PROTOCOL;
+                    message = `B92 sifting performed.`;
+                    if (eventDetails?.sifted_bits !== undefined) {
+                        message = `B92 sifting: ${eventDetails.sifted_bits} bits sifted.`;
+                    }
+                    break;
+
+                case 'b92_error_estimation':
+                    level = LogLevel.PROTOCOL;
+                    message = `B92 error rate estimated.`;
+                    if (eventDetails?.error_rate !== undefined) {
+                        message = `B92 error rate: ${(eventDetails.error_rate * 100).toFixed(2)}%.`;
+                    }
+                    break;
+
+                case 'b92_key_generation':
+                    level = LogLevel.PROTOCOL;
+                    message = `B92 key generated.`;
+                    if (eventDetails?.key_length) {
+                        message = `B92 key generated: ${eventDetails.key_length} bits.`;
+                    }
+                    break;
 
                 default:
-                    // message = `${source}: Unhandled B92 simulation event type "${eventType}".`;
+                    // message = `${source}: Unhandled simulation event type "${eventType}".`;
                     // level = LogLevel.WARN; // Unhandled type is a warning
-                    // console.warn(`Unhandled B92 simulation event type: ${eventType}`, eventData);
-                    break;
-            }
-
-        } else if (typeof eventData === 'object' && eventData !== null && (eventData.summary_text !== undefined || eventData.error_message !== undefined)) {
-            // Check if it's a simulation_summary structure
-            source = 'B92 Simulation Summary'; // Summary events are not node-specific
-            if (eventData.error_message) {
-                level = LogLevel.ERROR;
-                message = `B92 ERROR: ${eventData.error_message}`;
-            } else if (Array.isArray(eventData.summary_text) && eventData.summary_text.length > 0) {
-                level = LogLevel.STORY; // Summaries are high-level narratives
-                message = eventData.summary_text.join('\n'); // Join summary lines
-            } else {
-                level = LogLevel.WARN; // An empty summary is unexpected
-                message = 'Received empty B92 simulation summary.';
+                    // console.warn(`Unhandled simulation event type: ${eventType}`, eventData);
+                    return null; // Don't show unhandled events to reduce noise
             }
 
         } else {
-            // If it doesn't match expected simulation event or summary structure
-            level = LogLevel.WARN;
-            source = 'B92 Simulation System';
-            message = 'Received B92 data in unhandled format.';
-            console.warn('Received B92 data in unhandled format:', eventData);
+            // Handle other event formats (e.g., direct messages)
+            if (typeof eventData === 'string') {
+                message = eventData;
+                level = LogLevel.STORY;
+            } else if (eventData.message) {
+                message = eventData.message;
+                level = eventData.level || LogLevel.STORY;
+                source = eventData.source || source;
+            } else {
+                // Fallback for unknown formats
+                message = `Received data in unhandled format.`;
+                level = LogLevel.WARN;
+            }
         }
 
-    } catch (error: any) {
-        // Catch any errors during processing to prevent the function from crashing
-        message = `Error processing B92 event data: ${error.message}`;
+    } catch (error) {
+        console.error('Error converting event to log:', error, eventData);
+        message = `Error processing event: ${error.message}`;
         level = LogLevel.ERROR;
-        source = 'B92 System';
-        console.error('Error processing B92 event data:', eventData, error);
     }
 
-    return { level, time, source, message };
-}
-
-function sliceData(data: string): string {
-    if (typeof data !== 'string') { return data }
-    return data.slice(0, 10) + (data.length > 10 ? '...' : '');
+    return {
+        level,
+        source,
+        message,
+        timestamp: new Date().toISOString(),
+        raw: eventData
+    };
 }
 
 /**
- * Enhanced log parser that handles both BB84 and B92 events
+ * Slice data for display (truncate long strings)
  */
-export function convertEventToLogWithB92(eventData: any): LogI {
-    // First try B92-specific parsing
-    if (eventData && typeof eventData === 'object') {
-        const eventType = eventData.event_type || eventData.type || '';
-        const eventDetails = eventData.data || eventData;
-        
-        // Check if this is a B92 event by looking at the data
-        const isB92Event = eventDetails.protocol === 'B92' || 
-                          eventDetails.message?.includes('B92') ||
-                          eventDetails.message?.includes('b92') ||
-                          eventType.includes('b92') || 
-                          eventType.includes('B92') ||
-                          // Check packet data for B92 content
-                          (eventDetails.packet && (
-                              eventDetails.packet.data?.includes('B92') ||
-                              eventDetails.packet.data?.includes('b92') ||
-                              JSON.stringify(eventDetails.packet).includes('B92') ||
-                              JSON.stringify(eventDetails.packet).includes('b92')
-                          )) ||
-                          // Check if event type starts with student_b92
-                          eventType.startsWith('student_b92_') ||
-                          // Check if message contains B92
-                          eventData.message?.includes('B92') ||
-                          eventData.message?.includes('b92');
-        
-        if (isB92Event) {
-            return convertB92EventToLog(eventData);
-        }
-        
-        // If it's a student implementation event, check if we're in B92 mode
-        if (eventType.startsWith('student_') && eventType.includes('b92')) {
-            return convertB92EventToLog(eventData);
-        }
+function sliceData(data: any, maxLength: number = 50): string {
+    if (typeof data === 'string') {
+        return data.length > maxLength ? data.substring(0, maxLength) + '...' : data;
     }
-    
-    // Fall back to regular BB84 parsing
-    try {
-        // Import the original log parser
-        const { convertEventToLog } = require('./log-parser');
-        return convertEventToLog(eventData);
-    } catch (error) {
-        // If original parser not available, use B92 parser as fallback
-        return convertB92EventToLog(eventData);
-    }
+    return String(data);
 }

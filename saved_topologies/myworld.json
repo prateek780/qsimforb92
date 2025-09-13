@@ -1,0 +1,70 @@
+{
+  "name": "myworld",
+  "size": [
+    1200,
+    1200
+  ],
+  "zones": [
+    {
+      "name": "MainZone",
+      "position": [
+        0,
+        0
+      ],
+      "size": [
+        600,
+        600
+      ],
+      "networks": [
+        {
+          "name": "QuantumNetwork2",
+          "hosts": [
+            {
+              "name": "Alice",
+              "position": [
+                150,
+                150
+              ],
+              "type": "InteractiveQuantumHost"
+            },
+            {
+              "name": "Bob",
+              "position": [
+                300,
+                300
+              ],
+              "type": "InteractiveQuantumHost"
+            },
+            {
+              "name": "Eve",
+              "position": [
+                450,
+                150
+              ],
+              "type": "InteractiveQuantumHost"
+            }
+          ],
+          "channels": [
+            {
+              "name": "Alice-Bob",
+              "from_host": "Alice",
+              "to_host": "Bob",
+              "length": 150.0,
+              "loss_per_km": 0.1
+            },
+            {
+              "name": "Bob-Eve",
+              "from_host": "Bob",
+              "to_host": "Eve",
+              "length": 150.0,
+              "loss_per_km": 0.1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "temporary_world": false,
+  "lab_world": false,
+  "owner": "Default"
+}

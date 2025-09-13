@@ -23,12 +23,13 @@ def get_app(lifespan):
     from server.routes import register_routes
     register_routes(app)
     
-    # Register B92 routes
+    # Register B92 routes AFTER main routes to avoid catch-all route conflicts
     from server.routes_b92 import router as b92_router
     app.include_router(b92_router)
     
-    # Register B92 API routes
-    from server.api.quantum.quantum_api_b92 import router as b92_api_router
+    # Register B92 API routes AFTER main routes to avoid catch-all route conflicts
+    # Use simplified B92 API routes to avoid WebSocket connection issues
+    from server.api.quantum.quantum_api_b92_simple import router as b92_api_router
     app.include_router(b92_api_router)
     
     
@@ -47,13 +48,29 @@ def get_app(lifespan):
     @app.get("/api/simulation/status")
     async def get_simulation_status():
         try:
-            with open('simulation.log', 'r') as f:
-                import json
-                logs = [json.loads(line) for line in f]
-                return {"status": "success", "logs": logs}
-        except FileNotFoundError:
-            return {"status": "no_logs"}
+            from server.api.simulation.manager import SimulationManager
+            manager = SimulationManager.get_instance()
+            
+            if manager is None:
+                return {
+                    "is_running": False,
+                    "status": "not_initialized",
+                    "message": "Simulation manager not available"
+                }
+            
+            return {
+                "is_running": getattr(manager, 'is_running', False),
+                "status": "running" if getattr(manager, 'is_running', False) else "stopped",
+                "message": "Simulation is running" if getattr(manager, 'is_running', False) else "Simulation is stopped"
+            }
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            print(f"Error getting simulation status: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                "is_running": False,
+                "status": "error",
+                "message": f"Error getting simulation status: {str(e)}"
+            }
     
     return app

@@ -18,7 +18,12 @@ def proxy_to_live_app(app):
     async def proxy_to_react(path: str, request: Request):
         """
         Proxies requests to the React development server.
+        Excludes API routes to avoid conflicts with backend endpoints.
         """
+        # Skip API routes - let them be handled by the backend
+        if path.startswith("api/"):
+            return None
+            
         # Construct the target URL within the React dev server
         # httpx handles joining the base_url with the relative path
         url = httpx.URL(path=f"/{path}", query=request.url.query.encode("utf-8"))
@@ -162,9 +167,10 @@ def register_blueprints(app: FastAPI):
     except Exception as e:
         print(f"Warning: Could not load student status router: {e}")
 
-    @api_router.get("/{rest_of_path:path}")
-    async def handle_404(rest_of_path: str):
-        return Response(content="Route not found", status_code=404)
+    # Remove catch-all route to avoid conflicts with B92 routes
+    # @api_router.get("/{rest_of_path:path}")
+    # async def handle_404(rest_of_path: str):
+    #     return Response(content="Route not found", status_code=404)
 
     app.include_router(api_router)
 

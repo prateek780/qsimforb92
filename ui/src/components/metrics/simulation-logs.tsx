@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, Info, Search, BookOpen, GitBranch, Network, ChevronDown, Activity } from "lucide-react"
 import { WebSocketClient } from "@/services/socket"
 import { convertEventToLog } from "./log-parser"
+import { convertEventToLogB92 } from "./log-parser-b92"
 import { Input } from "../ui/input"
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "../ui/dropdown-menu"
 
@@ -104,9 +105,33 @@ export function SimulationLogsPanel() {
   const [logFilter, setLogFilter] = useState<LogLevel[]>([LogLevel.STORY, LogLevel.PROTOCOL, LogLevel.ERROR])
   const [searchQuery, setSearchQuery] = useState("")
   
-  // Helper function to parse events - handles both BB84 and B92
+  // Protocol detection function
+  const detectActiveProtocol = (): string => {
+    // Check if B92 events are present in recent logs
+    const recentLogs = socket.simulationEventLogs.slice(-10); // Check last 10 events
+    const hasB92Events = recentLogs.some(log => 
+      log?.data?.message?.includes('B92') || 
+      log?.data?.type?.includes('b92') ||
+      log?.data?.message?.includes('b92_')
+    );
+    
+    if (hasB92Events) {
+      return 'B92';
+    }
+    
+    // Default to BB84
+    return 'BB84';
+  };
+
+  // Helper function to parse events - handles both BB84 and B92 based on protocol detection
   const parseEventToLog = (event: any) => {
-    return convertEventToLog(event)
+    const protocol = detectActiveProtocol();
+    
+    if (protocol === 'B92') {
+      return convertEventToLogB92(event);
+    } else {
+      return convertEventToLog(event);
+    }
   }
   
   const [simulationLogs, setSimulationLogs] = useState<LogI[]>(

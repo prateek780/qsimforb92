@@ -163,7 +163,7 @@ const api = {
         return (await response.json()) as ServerSimulationStatus;
     },
     getStudentImplementationStatus: async () => {
-        const response = await makeFetchCall(SERVER_HOST + `/simulation/student-implementation-status/`);
+        const response = await makeFetchCall(SERVER_HOST + `/simulation/student-implementation-status-auto/`);
         
         return (await response.json()) as {
             requires_student_implementation: boolean;

@@ -1,6 +1,8 @@
 from __future__ import annotations
 import random
 import time
+import os
+import json
 try:
     import qutip as qt
 except Exception:
@@ -57,8 +59,14 @@ class QuantumChannel(Sobject):
             loss_prob = 1 - (1 - self.loss_per_km) ** length_km
             loss_prod_rand = random.random()
             if loss_prod_rand < loss_prob:
+                protocol = self.detect_active_protocol()
                 reason = f"Qubit lost during transmission in connection {self.name} over {length_km} km. (Loss probability: {loss_prob:.2f})"
-                print(f"⚠️ {reason} Loss probability: {loss_prob:.2f}. Random value: {loss_prod_rand:.2f}")
+                if protocol == "B92":
+                    print(f"⚠️ 🔬 B92 {reason} Loss probability: {loss_prob:.2f}. Random value: {loss_prod_rand:.2f}")
+                elif protocol == "BB84":
+                    print(f"⚠️ 🔐 BB84 {reason} Loss probability: {loss_prob:.2f}. Random value: {loss_prod_rand:.2f}")
+                else:
+                    print(f"⚠️ {reason} Loss probability: {loss_prob:.2f}. Random value: {loss_prod_rand:.2f}")
                 # Skip server update to avoid Redis configuration issues
                 # self._send_update(SimulationEventType.QUBIT_LOST, reason=reason)
                 raise QubitLossError(self, qubit)
@@ -74,8 +82,45 @@ class QuantumChannel(Sobject):
         to_node.receive_qubit(noisy_qubit, self)
 
     def log(self, message: str) -> None:
-        """Simple logging function - to be updated later"""
-        print(f"[QuantumChannel] {message}")
+        """Protocol-aware logging function"""
+        protocol = self.detect_active_protocol()
+        if protocol == "B92":
+            print(f"🔬 [B92-Channel] {message}")
+        elif protocol == "BB84":
+            print(f"🔐 [BB84-Channel] {message}")
+        else:
+            print(f"[QuantumChannel] {message}")
+    
+    def detect_active_protocol(self) -> str:
+        """Detect which protocol is currently active based on status files"""
+        # Use centralized protocol detection utility
+        try:
+            from protocol_detection_utils import detect_active_protocol
+            return detect_active_protocol()
+        except ImportError:
+            # Fallback to local implementation if utility not available
+            # Check for BB84 status file first (priority)
+            if os.path.exists("student_implementation_status.json"):
+                try:
+                    with open("student_implementation_status.json", "r") as f:
+                        status = json.load(f)
+                    if status.get("student_implementation_ready") and status.get("protocol") == "bb84":
+                        return "BB84"
+                except Exception:
+                    pass
+            
+            # Check for B92 status file (only if not disabled)
+            if os.path.exists("student_b92_implementation_status.json") and not os.path.exists("student_b92_implementation_status.json.disabled"):
+                try:
+                    with open("student_b92_implementation_status.json", "r") as f:
+                        status = json.load(f)
+                    if status.get("student_implementation_ready"):
+                        return "B92"
+                except Exception:
+                    pass
+            
+            # Default to BB84 if no clear detection
+            return "BB84"
 
     def get_other_node(self, node):
         return self.node_2 if self.node_1 == node else self.node_1
@@ -88,7 +133,13 @@ class QuantumChannel(Sobject):
         if qt is None or not isinstance(qubit, qt.Qobj):
             return qubit
             
-        self.log(f"Applying {self.noise_model} noise to qubit (strength: {noise_strength})")
+        protocol = self.detect_active_protocol()
+        if protocol == "B92":
+            self.log(f"🔬 Applying {self.noise_model} noise to B92 qubit (strength: {noise_strength})")
+        elif protocol == "BB84":
+            self.log(f"🔐 Applying {self.noise_model} noise to BB84 qubit (strength: {noise_strength})")
+        else:
+            self.log(f"Applying {self.noise_model} noise to qubit (strength: {noise_strength})")
         
         if self.noise_model == "transmutation":
             return self._apply_transmutation_noise(qubit, noise_strength)
@@ -108,17 +159,34 @@ class QuantumChannel(Sobject):
         if qt is None or not isinstance(qubit, qt.Qobj):
             return qubit
             
+        protocol = self.detect_active_protocol()
         if random.random() < p_flip:
-            self.log(f"Bit-flip occurred with probability {p_flip}")
+            if protocol == "B92":
+                self.log(f"🔬 B92 Bit-flip occurred with probability {p_flip}")
+            elif protocol == "BB84":
+                self.log(f"🔐 BB84 Bit-flip occurred with probability {p_flip}")
+            else:
+                self.log(f"Bit-flip occurred with probability {p_flip}")
             # Apply Pauli-X (bit flip)
             return qt.sigmax() * qubit
         else:
-            self.log(f"No bit-flip (probability was {p_flip})")
+            if protocol == "B92":
+                self.log(f"🔬 B92 No bit-flip (probability was {p_flip})")
+            elif protocol == "BB84":
+                self.log(f"🔐 BB84 No bit-flip (probability was {p_flip})")
+            else:
+                self.log(f"No bit-flip (probability was {p_flip})")
             return qubit
 
     def _apply_depolarizing_noise(self, qubit: 'qt.Qobj', p: float):
         """Apply depolarizing noise using Kraus operators"""
-        self.log(f"Applying depolarizing noise with strength {p}")
+        protocol = self.detect_active_protocol()
+        if protocol == "B92":
+            self.log(f"🔬 B92 Applying depolarizing noise with strength {p}")
+        elif protocol == "BB84":
+            self.log(f"🔐 BB84 Applying depolarizing noise with strength {p}")
+        else:
+            self.log(f"Applying depolarizing noise with strength {p}")
         if qt is None or not isinstance(qubit, qt.Qobj):
             return qubit
         
@@ -141,12 +209,24 @@ class QuantumChannel(Sobject):
         if not isinstance(noisy_rho, qt.Qobj):
             noisy_rho = qt.Qobj(noisy_rho)
         
-        self.log("Depolarizing noise applied successfully")
+        protocol = self.detect_active_protocol()
+        if protocol == "B92":
+            self.log("🔬 B92 Depolarizing noise applied successfully")
+        elif protocol == "BB84":
+            self.log("🔐 BB84 Depolarizing noise applied successfully")
+        else:
+            self.log("Depolarizing noise applied successfully")
         return noisy_rho
 
     def _apply_amplitude_damping(self, qubit: 'qt.Qobj', gamma: float):
         """Apply amplitude damping noise"""
-        self.log(f"Applying amplitude damping with gamma={gamma}")
+        protocol = self.detect_active_protocol()
+        if protocol == "B92":
+            self.log(f"🔬 B92 Applying amplitude damping with gamma={gamma}")
+        elif protocol == "BB84":
+            self.log(f"🔐 BB84 Applying amplitude damping with gamma={gamma}")
+        else:
+            self.log(f"Applying amplitude damping with gamma={gamma}")
         if qt is None or not isinstance(qubit, qt.Qobj):
             return qubit
         
@@ -166,12 +246,24 @@ class QuantumChannel(Sobject):
         if not isinstance(noisy_rho, qt.Qobj):
             noisy_rho = qt.Qobj(noisy_rho)
         
-        self.log("Amplitude damping applied successfully")
+        protocol = self.detect_active_protocol()
+        if protocol == "B92":
+            self.log("🔬 B92 Amplitude damping applied successfully")
+        elif protocol == "BB84":
+            self.log("🔐 BB84 Amplitude damping applied successfully")
+        else:
+            self.log("Amplitude damping applied successfully")
         return noisy_rho
 
     def _apply_phase_damping(self, qubit: 'qt.Qobj', gamma: float):
         """Apply phase damping noise"""
-        self.log(f"Applying phase damping with gamma={gamma}")
+        protocol = self.detect_active_protocol()
+        if protocol == "B92":
+            self.log(f"🔬 B92 Applying phase damping with gamma={gamma}")
+        elif protocol == "BB84":
+            self.log(f"🔐 BB84 Applying phase damping with gamma={gamma}")
+        else:
+            self.log(f"Applying phase damping with gamma={gamma}")
         if qt is None or not isinstance(qubit, qt.Qobj):
             return qubit
         
@@ -191,5 +283,11 @@ class QuantumChannel(Sobject):
         if not isinstance(noisy_rho, qt.Qobj):
             noisy_rho = qt.Qobj(noisy_rho)
         
-        self.log(f"Phase damping applied successfully. Before: {rho}, After: {noisy_rho}")
+        protocol = self.detect_active_protocol()
+        if protocol == "B92":
+            self.log(f"🔬 B92 Phase damping applied successfully. Before: {rho}, After: {noisy_rho}")
+        elif protocol == "BB84":
+            self.log(f"🔐 BB84 Phase damping applied successfully. Before: {rho}, After: {noisy_rho}")
+        else:
+            self.log(f"Phase damping applied successfully. Before: {rho}, After: {noisy_rho}")
         return noisy_rho

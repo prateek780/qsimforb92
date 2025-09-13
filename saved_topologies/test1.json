@@ -1,0 +1,55 @@
+{
+  "name": "test1",
+  "size": [
+    1000,
+    1000
+  ],
+  "zones": [
+    {
+      "name": "Zone1",
+      "position": [
+        0,
+        0
+      ],
+      "size": [
+        500,
+        500
+      ],
+      "networks": [
+        {
+          "name": "QuantumNetwork1",
+          "hosts": [
+            {
+              "name": "Alice",
+              "position": [
+                100,
+                100
+              ],
+              "type": "InteractiveQuantumHost"
+            },
+            {
+              "name": "Bob",
+              "position": [
+                200,
+                200
+              ],
+              "type": "InteractiveQuantumHost"
+            }
+          ],
+          "channels": [
+            {
+              "name": "Alice-Bob",
+              "from_host": "Alice",
+              "to_host": "Bob",
+              "length": 100.0,
+              "loss_per_km": 0.1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "temporary_world": false,
+  "lab_world": false,
+  "owner": "Default"
+}

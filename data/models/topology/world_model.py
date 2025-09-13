@@ -127,22 +127,8 @@ def get_all_topologies_from_redis(
         redis_conn = get_redis_conn()
         if redis_conn is None:
             print("Redis not available, using file storage")
-            # Import file storage functions locally to avoid circular import
-            from data.models.topology.file_storage import load_all_topologies_from_file
-            topologies_data = load_all_topologies_from_file(temporary_world, owner)
-            # Convert to WorldModal objects
-            worlds = []
-            for data in topologies_data:
-                try:
-                    # Remove pk from data as it's not part of the model
-                    data_copy = data.copy()
-                    data_copy.pop('pk', None)
-                    world = WorldModal(**data_copy)
-                    worlds.append(world)
-                except Exception as e:
-                    print(f"Error converting topology data: {e}")
-                    continue
-            return worlds
+            # Load from saved_topologies directory
+            return load_topologies_from_files(temporary_world, owner)
 
         # Use Redis
         worlds = WorldModal.find(WorldModal.temporary_world == temporary_world).all()
@@ -151,6 +137,48 @@ def get_all_topologies_from_redis(
         return worlds
     except Exception as e:
         print(f"Error retrieving topologies: {e}")
+        # Fallback to file storage
+        return load_topologies_from_files(temporary_world, owner)
+
+def load_topologies_from_files(temporary_world=False, owner=None) -> List[WorldModal]:
+    """Load topologies from saved_topologies directory"""
+    import json
+    import os
+    
+    topologies = []
+    topology_dir = "saved_topologies"
+    
+    if not os.path.exists(topology_dir):
+        print(f"Topology directory {topology_dir} not found")
+        return topologies
+    
+    try:
+        for filename in os.listdir(topology_dir):
+            if filename.endswith('.json'):
+                filepath = os.path.join(topology_dir, filename)
+                try:
+                    with open(filepath, 'r') as f:
+                        data = json.load(f)
+                    
+                    # Filter by temporary_world and owner if specified
+                    if temporary_world is not None and data.get('temporary_world') != temporary_world:
+                        continue
+                    if owner is not None and data.get('owner') != owner:
+                        continue
+                    
+                    # Convert to WorldModal
+                    world = WorldModal(**data)
+                    topologies.append(world)
+                    
+                except Exception as e:
+                    print(f"Error loading {filename}: {e}")
+                    continue
+        
+        print(f"Loaded {len(topologies)} topologies from files")
+        return topologies
+        
+    except Exception as e:
+        print(f"Error loading topologies from files: {e}")
         return []
 
 

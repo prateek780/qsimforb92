@@ -48,37 +48,37 @@ export function convertEventToLog(eventData: any): LogI {
                 if (msg.includes('STUDENT BB84: Starting with') && msg.includes('qubits using your code')) {
                     level = LogLevel.PROTOCOL;
                     const numQubits = eventDetails?.num_qubits || 0;
-                    message = `Student BB84 implementation: Starting protocol with ${numQubits} qubits`;
+                    message = `🔐 Student BB84 implementation: Starting protocol with ${numQubits} qubits`;
                 } else if (msg.includes('STUDENT BB84: Sent') && msg.includes('qubits using bb84_send_qubits')) {
                     level = LogLevel.STORY;
                     const qubitsSent = eventDetails?.qubits_sent || 0;
-                    message = `Student BB84: Sending ${qubitsSent} encoded qubits from Alice's bb84_send_qubits() through quantum channel (${qubitsSent} qubits) - Sample: [|+>, |->, |0>...]`;
+                    message = `🔐 Student BB84: Sending ${qubitsSent} encoded qubits from Alice's bb84_send_qubits() through quantum channel (${qubitsSent} qubits) - Sample: [|+>, |->, |0>...]`;
                 } else if (msg.includes('STUDENT BOB: Received qubit') && msg.includes('!')) {
                     level = LogLevel.PROTOCOL;
                     const received = eventDetails?.qubits_received || 0;
                     const total = eventDetails?.total_expected || 0;
-                    message = `Student Bob: Received all ${received} qubits, ready for bb84_reconcile_bases() [bb84_reconcile_bases]`;
+                    message = `🔐 Student Bob: Received all ${received} qubits, ready for bb84_reconcile_bases() [bb84_reconcile_bases]`;
                 } else if (msg.includes('STUDENT BOB: Found') && msg.includes('matching bases')) {
                     level = LogLevel.PROTOCOL;
                     const sharedBases = eventDetails?.shared_bases || 0;
                     const efficiency = eventDetails?.efficiency || 0;
-                    message = `Student Bob bb84_reconcile_bases(): Found ${sharedBases} matching bases out of ${sharedBases} (Efficiency: ${efficiency.toFixed(1)}%) [bb84_reconcile_bases] (${sharedBases} shared bases) (${efficiency.toFixed(1)}% efficiency)`;
+                    message = `🔐 Student Bob bb84_reconcile_bases(): Found ${sharedBases} matching bases out of ${sharedBases} (Efficiency: ${efficiency.toFixed(1)}%) [bb84_reconcile_bases] (${sharedBases} shared bases) (${efficiency.toFixed(1)}% efficiency)`;
                 } else if (msg.includes('STUDENT BOB: Error rate') && msg.includes('using bb84_estimate_error_rate')) {
                     level = LogLevel.PROTOCOL;
                     const errorRate = eventDetails?.error_rate || 0;
                     const errors = Math.round(errorRate * 16); // Assuming 16 qubits
-                    message = `Student Bob bb84_estimate_error_rate(): ${(errorRate * 100).toFixed(1)}% error rate (${errors}/16 errors) using student implementation [bb84_estimate_error_rate] (${(errorRate * 100).toFixed(1)}% error rate) (${errors}/16 errors)`;
+                    message = `🔐 Student Bob bb84_estimate_error_rate(): ${(errorRate * 100).toFixed(1)}% error rate (${errors}/16 errors) using student implementation [bb84_estimate_error_rate] (${(errorRate * 100).toFixed(1)}% error rate) (${errors}/16 errors)`;
                 } else if (msg.includes('BB84 QKD protocol completed successfully using student')) {
                     level = LogLevel.STORY;
                     const errorRate = eventDetails?.error_rate || 0;
                     const sharedBases = eventDetails?.shared_bases || 0;
-                    message = `BB84 QKD protocol completed successfully (${(errorRate * 100).toFixed(1)}% error rate) (${sharedBases} shared bases)`;
+                    message = `🔐 BB84 QKD protocol completed successfully (${(errorRate * 100).toFixed(1)}% error rate) (${sharedBases} shared bases)`;
                 } else if (msg.includes('BB84 PROTOCOL COMPLETE using student')) {
                     level = LogLevel.PROTOCOL;
-                    message = `Student BB84 Implementation Complete! All methods executed successfully: bb84_send_qubits(), process_received_qbit(), bb84_reconcile_bases(), bb84_estimate_error_rate() (0.0% error rate)`;
+                    message = `🔐 Student BB84 Implementation Complete! All methods executed successfully: bb84_send_qubits(), process_received_qbit(), bb84_reconcile_bases(), bb84_estimate_error_rate() (0.0% error rate)`;
                 } else if (msg.includes('BB84 Protocol Complete! All student methods executed successfully')) {
                     level = LogLevel.PROTOCOL;
-                    message = `BB84 Protocol Complete! All student methods executed successfully [bb84_complete]`;
+                    message = `🔐 BB84 Protocol Complete! All student methods executed successfully [bb84_complete]`;
                 }
             }
 
