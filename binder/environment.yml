@@ -1,0 +1,9 @@
+name: quantum-networking
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.13.3
+  - pip
+  - pip:
+    - -r binder_requirements.txt
