@@ -9,14 +9,15 @@ pip install --no-cache-dir -q \
   fastapi \
   "uvicorn[standard]"
 
-# (Optional) only for legacy Notebook 6 images — harmless if missing
+# Optional: enable legacy widgets only if the command exists (older images)
 if jupyter nbextension list >/dev/null 2>&1; then
   jupyter nbextension enable --py widgetsnbextension --sys-prefix || true
 fi
 
-# (Optional) If you want a code-hidden app view later, uncomment:
-# pip install --no-cache-dir -q voila
+# Install the autostart script so the kernel starts your backend automatically
+mkdir -p "${HOME}/.ipython/profile_default/startup"
+cp -f binder_autostart.py "${HOME}/.ipython/profile_default/startup/00-qsim-autostart.py"
 
-# Debug info in build logs (handy if something goes wrong)
+# Debug info (handy in build logs)
 python --version
 jupyter --version
