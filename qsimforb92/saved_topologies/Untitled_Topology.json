@@ -1,0 +1,229 @@
+{
+  "pk": "01K51M8G2J6SCXY0K80W4TTSSY",
+  "owner": "prateektest",
+  "name": "Untitled Topology",
+  "size": [
+    1198.915065066308,
+    494.2568208645565
+  ],
+  "zones": [
+    {
+      "name": "Zone 0",
+      "type": "SECURE",
+      "size": [
+        219.7866844601079,
+        118.43
+      ],
+      "position": [
+        -0.328857421875,
+        26.006467270618202
+      ],
+      "networks": [
+        {
+          "name": "Network-1",
+          "address": "",
+          "type": "CLASSICAL_NETWORK",
+          "location": [
+            -0.328857421875,
+            26.006467270618202
+          ],
+          "hosts": [
+            {
+              "name": "ClassicalHost-1",
+              "type": "ClassicalHost",
+              "address": "192.168.1.1",
+              "location": [
+                14.671142578125,
+                50.0
+              ]
+            },
+            {
+              "name": "ClassicalRouter-2",
+              "type": "ClassicalRouter",
+              "address": "192.168.1.2",
+              "location": [
+                140.1914696163579,
+                41.0064672706182
+              ]
+            }
+          ],
+          "connections": [
+            {
+              "from_node": "ClassicalHost-1",
+              "to_node": "ClassicalRouter-2",
+              "length": 130.5,
+              "loss_per_km": 0.1,
+              "name": "ClassicalHost-1-ClassicalRouter-2",
+              "noise_model": "none",
+              "noise_strength": 0.0,
+              "error_rate_threshold": 10,
+              "qbits": 128,
+              "bandwidth": 999999999,
+              "latency": 0.0,
+              "packet_loss_rate": 0.0,
+              "packet_error_rate": 0.0,
+              "mtu": 9999999999,
+              "connection_config_preset": "none"
+            }
+          ]
+        }
+      ],
+      "adapters": []
+    },
+    {
+      "name": "Zone 1",
+      "type": "SECURE",
+      "size": [
+        664.8887348457444,
+        96.44221595561218
+      ],
+      "position": [
+        434.0263302205637,
+        16.01365312686069
+      ],
+      "networks": [
+        {
+          "name": "Network-2",
+          "address": "",
+          "type": "QUANTUM_NETWORK",
+          "location": [
+            434.0263302205637,
+            16.01365312686069
+          ],
+          "hosts": [
+            {
+              "name": "QuantumHost-5",
+              "type": "QuantumHost",
+              "address": "",
+              "location": [
+                593.0064106269944,
+                31.01365312686069
+              ]
+            },
+            {
+              "name": "QuantumHost-4",
+              "type": "QuantumHost",
+              "address": "",
+              "location": [
+                449.0263302205637,
+                33.01221595561218
+              ]
+            }
+          ],
+          "connections": [
+            {
+              "from_node": "QuantumHost-5",
+              "to_node": "QuantumHost-4",
+              "length": 143.99,
+              "loss_per_km": 0.1,
+              "name": "QuantumHost-5-QuantumHost-4",
+              "noise_model": "none",
+              "noise_strength": 0.0,
+              "error_rate_threshold": 10,
+              "qbits": 128,
+              "bandwidth": 999999999,
+              "latency": 0.0,
+              "packet_loss_rate": 0.0,
+              "packet_error_rate": 0.0,
+              "mtu": 9999999999,
+              "connection_config_preset": "none"
+            }
+          ]
+        }
+      ],
+      "adapters": [
+        {
+          "name": "QuantumAdapter-3",
+          "type": "QuantumAdapter",
+          "address": "",
+          "location": [
+            315.8580470608668,
+            32.01293454123643
+          ],
+          "quantumHost": "QuantumHost-4",
+          "classicalHost": "ClassicalRouter-2",
+          "classicalNetwork": "Network-1",
+          "quantumNetwork": "Network-2"
+        },
+        {
+          "name": "QuantumAdapter-6",
+          "type": "QuantumAdapter",
+          "address": "",
+          "location": [
+            612.8169628991299,
+            135.93820163631477
+          ],
+          "quantumHost": "QuantumHost-5",
+          "classicalHost": "ClassicalRouter-7",
+          "classicalNetwork": "Network-3",
+          "quantumNetwork": "Network-2"
+        }
+      ]
+    },
+    {
+      "name": "Zone 2",
+      "type": "SECURE",
+      "size": [
+        554.7471167853969,
+        253.3329909407267
+      ],
+      "position": [
+        172.6472113997395,
+        140.92382992382986
+      ],
+      "networks": [
+        {
+          "name": "Network-3",
+          "address": "",
+          "type": "CLASSICAL_NETWORK",
+          "location": [
+            172.6472113997395,
+            140.92382992382986
+          ],
+          "hosts": [
+            {
+              "name": "ClassicalRouter-7",
+              "type": "ClassicalRouter",
+              "address": "192.168.1.1",
+              "location": [
+                475.1519019416469,
+                155.92382992382986
+              ]
+            },
+            {
+              "name": "ClassicalHost-8",
+              "type": "ClassicalHost",
+              "address": "192.168.1.2",
+              "location": [
+                187.6472113997395,
+                184.90299094072668
+              ]
+            }
+          ],
+          "connections": [
+            {
+              "from_node": "ClassicalRouter-7",
+              "to_node": "ClassicalHost-8",
+              "length": 293.67,
+              "loss_per_km": 0.1,
+              "name": "ClassicalRouter-7-ClassicalHost-8",
+              "noise_model": "none",
+              "noise_strength": 0.0,
+              "error_rate_threshold": 10,
+              "qbits": 128,
+              "bandwidth": 999999999,
+              "latency": 0.0,
+              "packet_loss_rate": 0.0,
+              "packet_error_rate": 0.0,
+              "mtu": 9999999999,
+              "connection_config_preset": "none"
+            }
+          ]
+        }
+      ],
+      "adapters": []
+    }
+  ],
+  "temporary_world": false,
+  "lab_world": false
+}

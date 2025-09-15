@@ -1,22 +1,79 @@
 #!/bin/bash
 
-# Binder post-build script
-echo "🔧 Setting up Quantum Networking System..."
+# Binder post-build script for Quantum Networking System
+echo "🔧 Setting up Quantum Networking System for Binder..."
 
-# Make scripts executable
-chmod +x binder/start.sh
+# Update package lists
+apt-get update -qq
+
+# Install Node.js 18 (LTS) for React build
+curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+apt-get install -y nodejs
+
+# Verify Node.js installation
+echo "Node.js version: $(node --version)"
+echo "npm version: $(npm --version)"
 
 # Create necessary directories
 mkdir -p saved_topologies
 mkdir -p simulation_logs
 mkdir -p ui/dist
 
-# Install additional packages if needed
-pip install --no-deps -r binder_requirements.txt
+# Install Python requirements
+echo "📦 Installing Python requirements..."
+pip install --no-cache-dir -r binder_requirements.txt
+
+# Navigate to UI directory and install React dependencies
+echo "📦 Installing React dependencies..."
+cd ui
+
+# Install npm dependencies
+npm install --production=false
+
+# Build the React application
+echo "🏗️ Building React application..."
+npm run build
+
+# Verify build
+if [ -d "dist" ]; then
+    echo "✅ React build successful!"
+    ls -la dist/
+else
+    echo "⚠️ React build failed, but continuing..."
+fi
+
+# Go back to root
+cd ..
 
 # Set up Jupyter extensions
+echo "📚 Setting up Jupyter extensions..."
 jupyter contrib nbextension install --sys-prefix
 jupyter nbextension enable --py widgetsnbextension --sys-prefix
 
+# Create a simple startup script
+cat > start_binder.sh << 'EOF'
+#!/bin/bash
+echo "🚀 Starting Quantum Networking System on Binder..."
+echo "📊 Backend will be available at: /proxy/5174"
+echo "📚 Jupyter notebook will be available at: /lab"
+echo "🔗 Opening notebook..."
+
+# Start the FastAPI backend in background
+python binder_app.py &
+BACKEND_PID=$!
+
+# Give backend time to start
+sleep 5
+
+# Open the main notebook
+jupyter lab --no-browser --port=8888 --ip=0.0.0.0 --allow-root --NotebookApp.token='' --NotebookApp.password='' &
+
+echo "✅ System started! Backend PID: $BACKEND_PID"
+echo "🌐 Access your application at the Binder URL with /proxy/5174"
+EOF
+
+chmod +x start_binder.sh
+
 echo "✅ Quantum Networking System setup complete!"
 echo "🚀 Ready to start the simulation!"
+echo "💡 Run './start_binder.sh' to start both backend and notebook"
