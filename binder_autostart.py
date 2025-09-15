@@ -1,70 +1,91 @@
 # binder_autostart.py
-# Auto-start your simulator backend when the IPython kernel starts (Binder-friendly).
-# Runs silently and is safe if the backend is already up.
+# Auto-start your simulator on kernel start (Binder-friendly).
+# Writes logs to ~/.qsim_backend.log so you can debug privately.
 
-import os, sys, subprocess, time, urllib.request, atexit, pathlib
+import os, sys, subprocess, time, urllib.request, atexit, pathlib, shlex
 
 PORT = int(os.environ.get("SIM_PORT", "5174"))
 HOST = "127.0.0.1"
+HOME = os.path.expanduser("~")
+LOG  = os.path.join(HOME, ".qsim_backend.log")
 
-def _probe(port=PORT, timeout=0.7):
+def _probe(url, timeout=0.7):
     try:
-        urllib.request.urlopen(f"http://{HOST}:{port}", timeout=timeout)
-        return True
+        with urllib.request.urlopen(url, timeout=timeout) as r:
+            return r.status in (200, 301, 302, 404)
     except Exception:
         return False
 
+def _probe_local():
+    return _probe(f"http://{HOST}:{PORT}")
+
 def _start_backend():
-    # Ensure notebook-safe mode
     env = os.environ.copy()
     env.setdefault("QSIM_MODE", "notebook")
     env.setdefault("USE_REDIS", "0")
 
-    # Choose ONE command that matches your project:
+    # Candidate commands (tries start.py first, then common ASGI paths)
+    cmds = []
     if pathlib.Path("start.py").exists():
-        cmd = [sys.executable, "start.py", "--host", "0.0.0.0", "--port", str(PORT)]
-    else:
-        # Fallback: uvicorn with your FastAPI app
-        # >>> change 'server.main:app' to your app import path if you use uvicorn <<<
-        app = env.get("ASGI_APP", "server.main:app")
-        cmd = [sys.executable, "-m", "uvicorn", app, "--host", "0.0.0.0", "--port", str(PORT)]
+        cmds.append([sys.executable, "start.py", "--host", "0.0.0.0", "--port", str(PORT)])
 
-    # Launch quietly
-    proc = subprocess.Popen(
-        cmd,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.STDOUT,
-        env=env
-    )
+    # Change these candidates to match your repo if you know the exact app path
+    asgi_candidates = [
+        "server.main:app",
+        "api.app:app",
+        "app.main:app",
+        "backend.app:app",
+        "main:app",
+    ]
+    for app in asgi_candidates:
+        cmds.append([sys.executable, "-m", "uvicorn", app, "--host", "0.0.0.0", "--port", str(PORT)])
 
-    # Stop it when the kernel exits
-    def _stop():
+    # Try commands until one boots
+    for cmd in cmds:
         try:
-            proc.terminate()
-        except Exception:
-            pass
-    atexit.register(_stop)
+            with open(LOG, "a", encoding="utf-8") as f:
+                f.write(f"\n=== launching: {shlex.join(cmd)} ===\n")
+            proc = subprocess.Popen(cmd, stdout=open(LOG, "ab"), stderr=subprocess.STDOUT, env=env)
+        except Exception as e:
+            with open(LOG, "a", encoding="utf-8") as f:
+                f.write(f"launch failed: {e}\n")
+            continue
 
-    # Wait briefly for readiness
-    for _ in range(120):
-        if _probe():
-            break
-        time.sleep(1)
+        # ensure we clean up when kernel exits
+        def _stop():
+            try: proc.terminate()
+            except Exception: pass
+        atexit.register(_stop)
+
+        # wait up to ~2 min for readiness
+        for _ in range(120):
+            if _probe_local():
+                with open(LOG, "a", encoding="utf-8") as f:
+                    f.write("backend ready ✅\n")
+                return True
+            time.sleep(1)
+
+        with open(LOG, "a", encoding="utf-8") as f:
+            f.write("boot attempt timed out; trying next candidate…\n")
+
+    # all attempts failed
+    with open(LOG, "a", encoding="utf-8") as f:
+        f.write("❌ all backend start attempts failed\n")
+    return False
 
 try:
-    if not _probe():
+    # avoid double-start if already running
+    if not _probe_local():
         _start_backend()
 
-    # Compute and stash the proxied URL (useful for any viewer code)
+    # stash the proxied URL for convenience
     base = os.environ.get("JUPYTERHUB_SERVICE_PREFIX", "/")
     proxied = f"{base}proxy/{PORT}/"
-    # Write a hint file (optional)
     try:
-        with open(os.path.expanduser("~/.qsim_proxy_url"), "w") as f:
+        with open(os.path.join(HOME, ".qsim_proxy_url"), "w", encoding="utf-8") as f:
             f.write(proxied)
     except Exception:
         pass
-
 except Exception:
-    # Never block kernel if the backend can't start
+    # never block kernel startup
     pass
