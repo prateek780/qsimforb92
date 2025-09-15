@@ -14,9 +14,6 @@ if jupyter nbextension list >/dev/null 2>&1; then
   jupyter nbextension enable --py widgetsnbextension --sys-prefix || true
 fi
 
-# Install the autostart script so the kernel starts your backend automatically
-mkdir -p "${HOME}/.ipython/profile_default/startup"
-cp -f binder_autostart.py "${HOME}/.ipython/profile_default/startup/00-qsim-autostart.py"
 
 # Debug info (handy in build logs)
 python --version
