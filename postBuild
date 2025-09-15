@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+pip install -q ipywidgets jupyterlab_widgets
+jupyter nbextension enable --py widgetsnbextension --sys-prefix
