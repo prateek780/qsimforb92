@@ -51,3 +51,9 @@ Started: 2025-09-13 16:25:56
 [16:26:17.719] SimulationEventType.INFO | QuantumHost-6 | {'type': 'qkd_complete_received', 'host': 'QuantumHost-6', 'key_length': 6}
 [16:26:17.723] SimulationEventType.DATA_RECEIVED | QuantumAdapter-8 | {'packet': <quantum_network.packet.QKDTransmissionPacket object at 0x000001FAC81AD480>}
 [16:26:17.726] SimulationEventType.PACKET_RECEIVED | QC_Router_QuantumAdapter-8 | {'packet': <quantum_network.packet.QKDTransmissionPacket object at 0x000001FAC81AD480>}
+[16:54:39.629] SimulationEventType.PACKET_TRANSMITTED | ClassicalHost-10-ClassicalRouter-9 | {'packet': <classical_network.packet.ClassicDataPacket object at 0x000001FAC8181F90>}
+[16:54:39.647] SimulationEventType.DATA_SENT | ClassicalHost-10 | {'data': 'hi ', 'destination': Host - 'ClassicalHost-1'}
+[16:54:40.933] SimulationEventType.PACKET_TRANSMITTED | Router - 'ClassicalRouter-9' <quantum_network.adapter.QuantumAdapter object at 0x000001FAC8201F90> Connection | {'packet': <classical_network.packet.ClassicDataPacket object at 0x000001FAC8181F90>}
+[16:54:40.946] SimulationEventType.PACKET_RECEIVED | ClassicalRouter-9 | {'packet': <classical_network.packet.ClassicDataPacket object at 0x000001FAC8181F90>}
+[16:54:43.968] SimulationEventType.DATA_RECEIVED | QuantumAdapter-8 | {'packet': <classical_network.packet.ClassicDataPacket object at 0x000001FAC8181F90>}
+[16:54:43.973] SimulationEventType.PACKET_RECEIVED | QC_Router_QuantumAdapter-8 | {'packet': <classical_network.packet.ClassicDataPacket object at 0x000001FAC8181F90>}
