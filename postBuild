@@ -1,20 +1,22 @@
 #!/bin/bash
-set -euxo pipefail
 
-# Core pieces for your notebook + backend proxy
-pip install --no-cache-dir -q \
-  ipywidgets \
-  jupyterlab_widgets \
-  jupyter-server-proxy \
-  fastapi \
-  "uvicorn[standard]"
+# Binder post-build script
+echo "🔧 Setting up Quantum Networking System..."
 
-# Optional: enable legacy widgets only if the command exists (older images)
-if jupyter nbextension list >/dev/null 2>&1; then
-  jupyter nbextension enable --py widgetsnbextension --sys-prefix || true
-fi
+# Make scripts executable
+chmod +x binder/start.sh
 
+# Create necessary directories
+mkdir -p saved_topologies
+mkdir -p simulation_logs
+mkdir -p ui/dist
 
-# Debug info (handy in build logs)
-python --version
-jupyter --version
+# Install additional packages if needed
+pip install --no-deps -r binder_requirements.txt
+
+# Set up Jupyter extensions
+jupyter contrib nbextension install --sys-prefix
+jupyter nbextension enable --py widgetsnbextension --sys-prefix
+
+echo " Quantum Networking System setup complete!"
+echo " Ready to start the simulation!"
