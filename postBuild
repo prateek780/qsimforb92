@@ -1,4 +1,22 @@
 #!/bin/bash
-set -e
-pip install -q ipywidgets jupyterlab_widgets
-jupyter nbextension enable --py widgetsnbextension --sys-prefix
+set -euxo pipefail
+
+# Core pieces for your notebook + backend proxy
+pip install --no-cache-dir -q \
+  ipywidgets \
+  jupyterlab_widgets \
+  jupyter-server-proxy \
+  fastapi \
+  "uvicorn[standard]"
+
+# (Optional) only for legacy Notebook 6 images — harmless if missing
+if jupyter nbextension list >/dev/null 2>&1; then
+  jupyter nbextension enable --py widgetsnbextension --sys-prefix || true
+fi
+
+# (Optional) If you want a code-hidden app view later, uncomment:
+# pip install --no-cache-dir -q voila
+
+# Debug info in build logs (handy if something goes wrong)
+python --version
+jupyter --version
