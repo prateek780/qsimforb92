@@ -1,15 +1,9 @@
 #!/bin/bash
 
-# Minimal Binder setup - just install Python packages
-echo "Setting up Quantum Networking System for Binder..."
+echo "Minimal Binder setup..."
 
-# Create necessary directories
-mkdir -p saved_topologies
-mkdir -p simulation_logs
+# Install only FastAPI and uvicorn
+pip install fastapi uvicorn
 
-# Install only essential Python packages
-echo "Installing Python requirements..."
-pip install --no-cache-dir fastapi uvicorn pydantic numpy matplotlib ipywidgets requests
-
-echo "Setup complete - backend will start via Procfile"
+echo "Setup complete"
 

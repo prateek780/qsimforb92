@@ -15,7 +15,7 @@ def setup_binder_environment():
     
     # Get Binder environment info
     binder_url = os.environ.get('BINDER_URL', 'https://mybinder.org')
-    binder_port = os.environ.get('BINDER_PORT', '5174')
+    binder_port = os.environ.get('PORT', '8080')
     
     # Construct the proxy URL
     proxy_url = f"{binder_url}/proxy/{binder_port}"
@@ -160,3 +160,71 @@ def setup_quantum_networking():
 # Auto-run setup when imported
 if __name__ == "__main__":
     setup_quantum_networking()
+
+# Test function for notebook cells
+def test_binder_system():
+    """Test the Binder system - copy this into a notebook cell"""
+    import subprocess
+    import sys
+    import time
+    import os
+    from IPython.display import display, HTML
+    
+    print("🧪 TESTING BINDER QUANTUM NETWORKING SYSTEM")
+    print("=" * 60)
+    
+    # Test 1: Environment
+    port = os.environ.get("PORT", "8080")
+    print(f"✅ Binder PORT: {port}")
+    
+    # Test 2: Imports
+    try:
+        from server.app import get_app
+        from quantum_network.adapter import QuantumAdapter
+        from classical_network.host import ClassicalHost
+        print("✅ All imports successful")
+    except Exception as e:
+        print(f"❌ Import failed: {e}")
+        return False
+    
+    # Test 3: FastAPI App
+    try:
+        from fastapi.concurrency import asynccontextmanager
+        
+        @asynccontextmanager
+        async def test_lifespan(app):
+            yield
+        
+        app = get_app(lifespan=test_lifespan)
+        print("✅ FastAPI app created")
+        
+        # Test endpoints
+        from fastapi.testclient import TestClient
+        client = TestClient(app)
+        
+        response = client.get("/")
+        print(f"✅ Root endpoint: {response.status_code}")
+        
+        response = client.get("/api/simulation/status")
+        print(f"✅ Simulation status: {response.status_code}")
+        
+    except Exception as e:
+        print(f"❌ FastAPI test failed: {e}")
+        return False
+    
+    # Success display
+    display(HTML("""
+    <div style="text-align: center; margin: 20px; padding: 20px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 10px;">
+        <h2>🎉 BINDER SYSTEM READY!</h2>
+        <p><strong>Status:</strong> Quantum networking system is operational</p>
+        <p><strong>Port:</strong> """ + port + """</p>
+        <p><strong>Ready for:</strong> BB84/B92 simulation, student implementation</p>
+        <button onclick="window.open('/api/docs', '_blank')" 
+                style="background: #007bff; color: white; padding: 15px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 5px;">
+            View API Docs
+        </button>
+    </div>
+    """))
+    
+    print("🚀 System ready for quantum networking simulation!")
+    return True

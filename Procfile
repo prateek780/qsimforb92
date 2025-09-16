@@ -1,1 +1,1 @@
-web: uvicorn binder_app:app --host 0.0.0.0 --port 5174
+web: bash binder/start.sh

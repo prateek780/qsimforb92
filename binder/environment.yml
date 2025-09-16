@@ -8,9 +8,3 @@ dependencies:
   - pip:
     - fastapi
     - uvicorn
-    - pydantic
-    - numpy
-    - matplotlib
-    - jupyter
-    - ipywidgets
-    - requests

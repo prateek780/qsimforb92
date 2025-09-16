@@ -15,19 +15,19 @@ export default defineConfig({
     port: 3000,  // Frontend will run on port 3000
     proxy: {
       '/api': {
-        target: 'http://localhost:5174',  // Backend runs on 5174
+        target: process.env.VITE_API_URL || 'http://localhost:8080',  // Backend runs on Binder port
         changeOrigin: true,
         secure: false,
         ws: true
       },
       '/ws': {
-        target: 'ws://localhost:5174',
+        target: (process.env.VITE_API_URL || 'http://localhost:8080').replace('http', 'ws'),
         ws: true
       }
     }
   },
   define: {
-    'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://localhost:5174')
+    'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://localhost:8080')
   },
   build: {
     outDir: 'dist'
