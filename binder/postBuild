@@ -3,16 +3,14 @@
 # Binder post-build script for Quantum Networking System
 echo "🔧 Setting up Quantum Networking System for Binder..."
 
-# Update package lists
-apt-get update -qq
-
-# Install Node.js 18 (LTS) for React build
-curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-apt-get install -y nodejs
-
-# Verify Node.js installation
-echo "Node.js version: $(node --version)"
-echo "npm version: $(npm --version)"
+# Check if Node.js is available (Binder usually has it pre-installed)
+if command -v node >/dev/null 2>&1; then
+    echo "✅ Node.js is already available"
+    echo "Node.js version: $(node --version)"
+    echo "npm version: $(npm --version)"
+else
+    echo "⚠️ Node.js not found, but continuing with Python setup..."
+fi
 
 # Create necessary directories
 mkdir -p saved_topologies
@@ -45,10 +43,21 @@ fi
 # Go back to root
 cd ..
 
-# Set up Jupyter extensions
+# Set up Jupyter extensions (with error handling)
 echo "📚 Setting up Jupyter extensions..."
-jupyter contrib nbextension install --sys-prefix
-jupyter nbextension enable --py widgetsnbextension --sys-prefix
+# Try to install contrib nbextensions, but don't fail if it doesn't work
+if jupyter contrib nbextension install --sys-prefix 2>/dev/null; then
+    echo "✅ Jupyter contrib nbextensions installed"
+else
+    echo "⚠️ Jupyter contrib nbextensions not available, skipping..."
+fi
+
+# Enable widget extension (essential for ipywidgets)
+if jupyter nbextension enable --py widgetsnbextension --sys-prefix 2>/dev/null; then
+    echo "✅ Widget extension enabled"
+else
+    echo "⚠️ Widget extension not available, continuing..."
+fi
 
 # Create a simple startup script
 cat > start_binder.sh << 'EOF'
