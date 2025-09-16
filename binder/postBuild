@@ -2,9 +2,6 @@
 
 echo "🚀 Setting up Quantum Networking System for Binder..."
 
-# Install all requirements
-pip install -r binder_requirements.txt
-
 # Create necessary directories
 mkdir -p saved_topologies
 mkdir -p simulation_logs
