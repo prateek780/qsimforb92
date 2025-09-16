@@ -275,6 +275,7 @@ def show_simulation_interface():
         proxy_path = f"/proxy/{binder_port}"
         print("🌐 Binder Environment Detected")
         print(f"🔗 Backend should be accessible at: {proxy_path}")
+        print(f"🔗 Direct URL: https://mybinder.org/v2/gh/prateek780/qsimforb92/HEAD -> {proxy_path}")
         
         # Create status file
         create_bb84_status_file()
