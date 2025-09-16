@@ -100,7 +100,7 @@ app = get_app(lifespan=lifespan)
 if __name__ == '__main__':
     try:
         host = os.getenv("HOST", "0.0.0.0")
-        port = int(os.getenv("PORT", "5174"))  # Backend runs on 5174
+        port = int(os.getenv("PORT", "8080"))  # Binder uses PORT env var
         reload_flag = os.getenv("DEBUG", "True").lower() in ["true", "1", "t"]
         
         # Enable CORS for frontend
@@ -110,8 +110,9 @@ if __name__ == '__main__':
             allow_origins=[
                 "http://localhost:3000",  # Frontend dev server
                 "http://127.0.0.1:3000",
-                "http://localhost:5174",  # Backend server
-                "http://127.0.0.1:5174",
+                "http://localhost:8080",  # Binder backend server
+                "http://127.0.0.1:8080",
+                "*",  # Allow all origins for Binder
             ],
             allow_credentials=True,
             allow_methods=["*"],

@@ -25,5 +25,5 @@ else
 fi
 
 # Start the FastAPI application
-echo "🌐 Starting FastAPI server on port 5174..."
-python binder_app.py
+echo "🌐 Starting FastAPI server on port ${PORT:-8080}..."
+python start.py

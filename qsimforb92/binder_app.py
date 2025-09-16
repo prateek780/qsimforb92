@@ -151,13 +151,14 @@ if __name__ == "__main__":
     # Run the app
     print("🚀 Starting Quantum Networking System for Binder...")
     print(f"📁 Working directory: {current_dir}")
-    print(f"🌐 Server will be available at: http://localhost:5174")
-    print(f"🔗 Binder proxy URL: https://mybinder.org/v2/gh/YOUR_USERNAME/YOUR_REPO/HEAD?urlpath=proxy/5174")
+    port = int(os.environ.get("PORT", "8080"))
+    print(f"🌐 Server will be available at: http://localhost:{port}")
+    print(f"🔗 Binder proxy URL: https://mybinder.org/v2/gh/YOUR_USERNAME/YOUR_REPO/HEAD?urlpath=proxy/{port}")
     
     uvicorn.run(
         "binder_app:app",
         host="0.0.0.0",
-        port=5174,
+        port=int(os.environ.get("PORT", "8080")),
         reload=False,  # Disable reload for Binder
         log_level="info"
     )
