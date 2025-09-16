@@ -21,8 +21,31 @@ mkdir -p ui/dist
 echo "Installing Python requirements..."
 pip install --no-cache-dir fastapi uvicorn pydantic numpy matplotlib ipywidgets
 
-# Skip React build for now to simplify
-echo "Skipping React build for simplified setup"
+# Build React frontend
+echo "Building React frontend..."
+cd ui
+
+# Check if package.json exists
+if [ -f "package.json" ]; then
+    echo "Installing React dependencies..."
+    npm install --production=false
+    
+    echo "Building React application..."
+    npm run build
+    
+    # Verify build
+    if [ -d "dist" ]; then
+        echo "React build successful!"
+        ls -la dist/
+    else
+        echo "React build failed, but continuing..."
+    fi
+else
+    echo "No package.json found in ui directory"
+fi
+
+# Go back to root
+cd ..
 
 # Skip Jupyter extensions setup to avoid errors
 echo "Skipping Jupyter extensions setup"
