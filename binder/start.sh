@@ -27,4 +27,6 @@ fi
 
 # Start the FastAPI application
 echo "🌐 Starting FastAPI server on port ${PORT:-8080}..."
+export HOST="0.0.0.0"
+export PORT="${PORT:-8080}"
 python start.py
