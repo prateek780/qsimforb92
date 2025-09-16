@@ -15,13 +15,14 @@ export REDIS_DB="0"
 mkdir -p saved_topologies
 mkdir -p simulation_logs
 
-# Start Redis if available
+# Start Redis if available (optional for Binder)
 if command -v redis-server &> /dev/null; then
     echo "📦 Starting Redis server..."
     redis-server --daemonize yes --port 6379
     sleep 2
 else
     echo "⚠️ Redis not available, using file storage fallback"
+    echo "💡 This is normal for Binder deployment"
 fi
 
 # Start the FastAPI application
