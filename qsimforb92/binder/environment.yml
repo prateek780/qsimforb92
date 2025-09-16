@@ -4,25 +4,21 @@ channels:
 dependencies:
   - python=3.11
   - pip
-  - nodejs=18.*  # For building React frontend
-  - npm=9.*
-  # Essential scientific packages via conda
-  - numpy=1.26.*
-  - scipy=1.16.*
-  - pandas>=2,<3
-  - matplotlib-base>=3.8,<3.11
+  - nodejs=18
+  - npm=9
+  - numpy=1.26
+  - scipy=1.16
+  - pandas=2.0
+  - matplotlib-base=3.8
   - networkx
   - qutip=5.0.4
-  - ipywidgets>=8
+  - ipywidgets=8
   - pip:
-      # Core web framework - minimal versions
-      - fastapi>=0.104.0
-      - uvicorn[standard]>=0.24.0
-      - pydantic>=2.0.0
-      - pydantic-settings>=2.0.0
+      - fastapi
+      - uvicorn[standard]
+      - pydantic
+      - pydantic-settings
       - python-multipart
-      
-      # Essential utilities
       - httpx
       - websockets
       - jinja2
@@ -37,23 +33,15 @@ dependencies:
       - pyyaml
       - toml
       - psutil
-
-      # Quantum networking essentials
-      - redis>=5.0.0
-      - redis-om>=0.1.0
+      - redis
+      - redis-om
       - cryptography
       - pycryptodome
-
-      # AI/ML (minimal set)
-      - openai>=1.0.0
-      - langchain>=0.1.0
-      - langchain-openai>=0.1.0
+      - openai
+      - langchain
+      - langchain-openai
       - markdown
-
-      # Data handling
       - openpyxl
       - xlsxwriter
-
-      # Testing
       - pytest
       - pytest-asyncio
