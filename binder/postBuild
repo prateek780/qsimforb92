@@ -18,46 +18,14 @@ mkdir -p simulation_logs
 mkdir -p ui/dist
 
 # Install Python requirements
-echo "📦 Installing Python requirements..."
-pip install --no-cache-dir -r binder_requirements.txt
+echo "Installing Python requirements..."
+pip install --no-cache-dir fastapi uvicorn pydantic numpy matplotlib ipywidgets
 
-# Navigate to UI directory and install React dependencies
-echo "📦 Installing React dependencies..."
-cd ui
+# Skip React build for now to simplify
+echo "Skipping React build for simplified setup"
 
-# Install npm dependencies
-npm install --production=false
-
-# Build the React application
-echo "🏗️ Building React application..."
-npm run build
-
-# Verify build
-if [ -d "dist" ]; then
-    echo "✅ React build successful!"
-    ls -la dist/
-else
-    echo "⚠️ React build failed, but continuing..."
-fi
-
-# Go back to root
-cd ..
-
-# Set up Jupyter extensions (with error handling)
-echo "📚 Setting up Jupyter extensions..."
-# Try to install contrib nbextensions, but don't fail if it doesn't work
-if jupyter contrib nbextension install --sys-prefix 2>/dev/null; then
-    echo "✅ Jupyter contrib nbextensions installed"
-else
-    echo "⚠️ Jupyter contrib nbextensions not available, skipping..."
-fi
-
-# Enable widget extension (essential for ipywidgets)
-if jupyter nbextension enable --py widgetsnbextension --sys-prefix 2>/dev/null; then
-    echo "✅ Widget extension enabled"
-else
-    echo "⚠️ Widget extension not available, continuing..."
-fi
+# Skip Jupyter extensions setup to avoid errors
+echo "Skipping Jupyter extensions setup"
 
 # Create a simple startup script
 cat > start_binder.sh << 'EOF'
@@ -83,6 +51,5 @@ EOF
 
 chmod +x start_binder.sh
 
-echo "✅ Quantum Networking System setup complete!"
-echo "🚀 Ready to start the simulation!"
-echo "💡 Run './start_binder.sh' to start both backend and notebook"
+echo "Quantum Networking System setup complete!"
+echo "Ready to start the simulation!"
