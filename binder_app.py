@@ -18,9 +18,12 @@ sys.path.insert(0, str(current_dir))
 
 # Import your existing backend modules
 try:
-    from server.app import app as backend_app
-    from server.routes import router as api_router
+    from server.app import get_app
     print("✅ Backend modules imported successfully")
+    
+    # Create backend app using the factory function
+    backend_app = get_app(lifespan=None)
+    print("✅ Backend app created using factory function")
 except ImportError as e:
     print(f"⚠️ Could not import backend modules: {e}")
     # Create a minimal FastAPI app if backend modules aren't available
