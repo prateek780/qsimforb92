@@ -4,15 +4,15 @@ channels:
 dependencies:
   - python=3.11
   - pip
-  - nodejs=18
-  - npm=9
-  - numpy=1.26
-  - scipy=1.16
-  - pandas=2.0
-  - matplotlib-base=3.8
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
   - networkx
-  - qutip=5.0.4
-  - ipywidgets=8
+  - qutip
+  - ipywidgets
+  - nodejs
+  - npm
   - pip:
       - fastapi
       - uvicorn[standard]
