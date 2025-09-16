@@ -16,17 +16,4 @@ export DISABLE_REDIS_LOGGING=1
 echo "🔬 Installing qutip via pip..."
 pip install qutip
 
-# Build React frontend if it exists
-echo "🔨 Building React frontend..."
-cd ui
-if [ -f "package.json" ]; then
-    npm install --silent
-    npm run build --silent
-    echo "✅ Frontend built successfully"
-else
-    echo "⚠️ No package.json found in ui directory"
-fi
-cd ..
-
 echo "✅ Setup complete - Quantum networking system ready!"
-
