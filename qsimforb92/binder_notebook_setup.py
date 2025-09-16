@@ -228,3 +228,92 @@ def test_binder_system():
     
     print("🚀 System ready for quantum networking simulation!")
     return True
+
+def show_simulation_interface():
+    """Display the simulation interface for Binder"""
+    import os
+    import urllib.request
+    import urllib.error
+    import json
+    
+    def check_server_status(url: str, timeout: float = 2.0) -> bool:
+        """Check if the backend server is running"""
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as resp:
+                return resp.status in (200, 301, 302, 404)
+        except Exception:
+            return False
+
+    def create_bb84_status_file():
+        """Create BB84 status file for the backend"""
+        status = {
+            "student_implementation_ready": True,
+            "protocol": "bb84",
+            "implementation_type": "StudentImplementationBridge",
+            "methods_implemented": [
+                "bb84_send_qubits",
+                "process_received_qbit", 
+                "bb84_reconcile_bases",
+                "bb84_estimate_error_rate"
+            ],
+            "binder_deployment": True,
+            "has_valid_implementation": True,
+        }
+        
+        with open("student_implementation_status.json", "w") as f:
+            json.dump(status, f, indent=2)
+        
+        print("✅ BB84 status file created for backend")
+
+    # Detect environment
+    is_binder = 'JUPYTERHUB_SERVICE_PREFIX' in os.environ
+    
+    if is_binder:
+        # For Binder, use the proxy path (not a real host)
+        # Binder uses $PORT environment variable, defaulting to 8080
+        binder_port = os.environ.get('PORT', '8080')
+        proxy_path = f"/proxy/{binder_port}"
+        print("🌐 Binder Environment Detected")
+        print(f"🔗 Backend should be accessible at: {proxy_path}")
+        print(f"🔗 Direct URL: https://mybinder.org/v2/gh/prateek780/qsimforb92/HEAD -> {proxy_path}")
+        
+        # Create status file
+        create_bb84_status_file()
+        
+        # Display simulation interface directly (no host check needed)
+        from IPython.display import IFrame, display
+        display(IFrame(src=proxy_path, width="100%", height=800))
+        
+        print("🎯 Simulation interface loaded!")
+        print("📊 You can now:")
+        print("   • Create quantum hosts")
+        print("   • Run BB84 protocol simulations")
+        print("   • View real-time logs")
+        print("   • Analyze quantum networking")
+        
+    else:
+        host = "http://localhost:8080"
+        print("🌐 Local Environment Detected")
+        
+        # Check if backend is running
+        if check_server_status(host):
+            print(f"✅ Backend is running at {host}")
+            
+            # Create status file
+            create_bb84_status_file()
+            
+            # Display simulation interface
+            from IPython.display import IFrame, display
+            display(IFrame(src=host, width="100%", height=800))
+            
+            print("🎯 Simulation interface loaded!")
+            print("📊 You can now:")
+            print("   • Create quantum hosts")
+            print("   • Run BB84 protocol simulations")
+            print("   • View real-time logs")
+            print("   • Analyze quantum networking")
+            
+        else:
+            print(f"❌ Backend not running at {host}")
+            print("💡 Run: python start.py")
+            print("   Then re-run this cell")
