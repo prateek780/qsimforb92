@@ -16,18 +16,9 @@ import uvicorn
 current_dir = Path(__file__).parent
 sys.path.insert(0, str(current_dir))
 
-# Import your existing backend modules
-try:
-    from server.app import get_app
-    print("✅ Backend modules imported successfully")
-    
-    # Create backend app using the factory function
-    backend_app = get_app(lifespan=None)
-    print("✅ Backend app created using factory function")
-except ImportError as e:
-    print(f"⚠️ Could not import backend modules: {e}")
-    # Create a minimal FastAPI app if backend modules aren't available
-    backend_app = FastAPI(title="Quantum Networking API")
+# Create a simple backend app without complex dependencies
+backend_app = FastAPI(title="Quantum Networking API")
+print("Simple backend app created")
 
 # Create the main app
 app = FastAPI(
@@ -45,46 +36,49 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount the API routes
-try:
-    app.mount("/api", backend_app)
-    print("✅ API routes mounted at /api")
-except Exception as e:
-    print(f"⚠️ Could not mount API routes: {e}")
+# Add simple API routes directly to main app
+@app.get("/api/status")
+async def get_status():
+    """Get system status"""
+    return {
+        "status": "running",
+        "backend": "FastAPI",
+        "protocols": ["BB84", "B92"],
+        "binder_deployment": True,
+        "student_implementation_ready": True
+    }
 
-# Check if React build exists
-react_build_path = current_dir / "ui" / "dist"
-if react_build_path.exists():
-    print(f"✅ React build found at: {react_build_path}")
-    
-    # Mount static files
-    app.mount("/static", StaticFiles(directory=str(react_build_path / "static")), name="static")
-    
-    @app.get("/", response_class=HTMLResponse)
-    async def serve_react_app():
-        """Serve the React application"""
-        return FileResponse(str(react_build_path / "index.html"))
-    
-    @app.get("/{path:path}")
-    async def serve_react_routes(path: str):
-        """Serve React routes (SPA routing)"""
-        # Check if it's an API route
-        if path.startswith("api/"):
-            # Let the API handle it
-            pass
-        else:
-            # Serve the React app for all other routes
-            return FileResponse(str(react_build_path / "index.html"))
-    
-    print("✅ React app configured for SPA routing")
-    
-else:
-    print("⚠️ React build not found, serving basic HTML")
-    
-    @app.get("/", response_class=HTMLResponse)
-    async def serve_basic_app():
-        """Serve a basic HTML page when React build is not available"""
-        return """
+@app.get("/api/bb84")
+async def get_bb84_info():
+    """Get BB84 protocol information"""
+    return {
+        "protocol": "BB84",
+        "description": "Quantum Key Distribution Protocol",
+        "states": ["|0⟩", "|1⟩", "|+⟩", "|-⟩"],
+        "bases": ["Z-basis (rectilinear)", "X-basis (diagonal)"],
+        "security": "Unconditional security based on quantum mechanics"
+    }
+
+@app.get("/api/b92")
+async def get_b92_info():
+    """Get B92 protocol information"""
+    return {
+        "protocol": "B92",
+        "description": "Simplified Quantum Key Distribution Protocol",
+        "states": ["|0⟩", "|+⟩"],
+        "bases": ["Z-basis", "X-basis"],
+        "security": "Based on non-orthogonal quantum states"
+    }
+
+print("API routes added")
+
+# Always serve simple HTML interface (no React dependency)
+print("Serving simple HTML interface")
+
+@app.get("/", response_class=HTMLResponse)
+async def serve_basic_app():
+    """Serve a basic HTML page when React build is not available"""
+    return """
         <!DOCTYPE html>
         <html>
         <head>
