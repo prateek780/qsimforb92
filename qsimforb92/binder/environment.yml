@@ -5,12 +5,10 @@ channels:
 dependencies:
   - python=3.11
   - pip
+  - numpy
+  - scipy
+  - matplotlib
+  - networkx
+  - pandas
   - pip:
-    - fastapi
-    - uvicorn
-    - pydantic
-    - numpy
-    - matplotlib
-    - jupyter
-    - ipywidgets
-    - requests
+    - -r binder_requirements.txt
