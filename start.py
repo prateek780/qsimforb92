@@ -2,25 +2,29 @@ import os
 import sys
 import pathlib
 
+# Set up environment variables BEFORE any imports
+os.environ["REDIS_HOST"] = "localhost"
+os.environ["REDIS_PORT"] = "6379"
+os.environ["REDIS_USERNAME"] = "default"
+os.environ["REDIS_PASSWORD"] = ""
+os.environ["REDIS_DB"] = "0"
+os.environ["REDIS_SSL"] = "false"
+os.environ["REDIS_OM_URL"] = "redis://localhost:6379/0"
+
 # Fix Python path for data.models imports
 ROOT = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
 # Set up Redis with fallback to file storage
-os.environ["REDIS_HOST"] = "redis-11509.c90.us-east-1-3.ec2.redns.redis-cloud.com"
-os.environ["REDIS_PORT"] = "11509"
-os.environ["REDIS_USERNAME"] = "default"
-os.environ["REDIS_PASSWORD"] = "aDevCXKeLli9kldGJccV15D1yS93Oyvd"
-os.environ["REDIS_DB"] = "0"
-os.environ["REDIS_SSL"] = "false"
-
-# Set Redis URL for redis_om before any imports
-os.environ["REDIS_OM_URL"] = "redis://default:aDevCXKeLli9kldGJccV15D1yS93Oyvd@redis-11509.c90.us-east-1-3.ec2.redns.redis-cloud.com:11509/0"
 
 # Disable only problematic features, keep topology storage
 os.environ["DISABLE_EMBEDDING"] = "1"
 os.environ["DISABLE_AI_FEATURES"] = "1"
 os.environ["DISABLE_REDIS_LOGGING"] = "1"
+
+# Clear config cache to force reload with new environment variables
+from config.config import clear_config_cache
+clear_config_cache()
 
 print("🔧 REDIS ENABLED - Topology storage available")
 print("🔧 EMBEDDING DISABLED - No memory issues")
