@@ -1,78 +1,15 @@
 #!/bin/bash
 
-# Binder post-build script for Quantum Networking System
-echo "🔧 Setting up Quantum Networking System for Binder..."
-
-# Check if Node.js is available (Binder usually has it pre-installed)
-if command -v node >/dev/null 2>&1; then
-    echo "✅ Node.js is already available"
-    echo "Node.js version: $(node --version)"
-    echo "npm version: $(npm --version)"
-else
-    echo "⚠️ Node.js not found, but continuing with Python setup..."
-fi
+# Minimal Binder setup - just install Python packages
+echo "Setting up Quantum Networking System for Binder..."
 
 # Create necessary directories
 mkdir -p saved_topologies
 mkdir -p simulation_logs
-mkdir -p ui/dist
 
-# Install Python requirements
+# Install only essential Python packages
 echo "Installing Python requirements..."
-pip install --no-cache-dir fastapi uvicorn pydantic numpy matplotlib ipywidgets
+pip install --no-cache-dir fastapi uvicorn pydantic numpy matplotlib ipywidgets requests
 
-# Build React frontend
-echo "Building React frontend..."
-cd ui
+echo "Setup complete - backend will start via Procfile"
 
-# Check if package.json exists
-if [ -f "package.json" ]; then
-    echo "Installing React dependencies..."
-    npm install --production=false
-    
-    echo "Building React application..."
-    npm run build
-    
-    # Verify build
-    if [ -d "dist" ]; then
-        echo "React build successful!"
-        ls -la dist/
-    else
-        echo "React build failed, but continuing..."
-    fi
-else
-    echo "No package.json found in ui directory"
-fi
-
-# Go back to root
-cd ..
-
-# Skip Jupyter extensions setup to avoid errors
-echo "Skipping Jupyter extensions setup"
-
-# Create a simple startup script
-cat > start_binder.sh << 'EOF'
-#!/bin/bash
-echo "🚀 Starting Quantum Networking System on Binder..."
-echo "📊 Backend will be available at: /proxy/5174"
-echo "📚 Jupyter notebook will be available at: /lab"
-echo "🔗 Opening notebook..."
-
-# Start the FastAPI backend in background
-python binder_app.py &
-BACKEND_PID=$!
-
-# Give backend time to start
-sleep 5
-
-# Open the main notebook
-jupyter lab --no-browser --port=8888 --ip=0.0.0.0 --allow-root --NotebookApp.token='' --NotebookApp.password='' &
-
-echo "✅ System started! Backend PID: $BACKEND_PID"
-echo "🌐 Access your application at the Binder URL with /proxy/5174"
-EOF
-
-chmod +x start_binder.sh
-
-echo "Quantum Networking System setup complete!"
-echo "Ready to start the simulation!"
