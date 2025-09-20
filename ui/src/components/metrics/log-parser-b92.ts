@@ -39,6 +39,10 @@ export function convertEventToLogB92(eventData: any): any {
                 } else if (msg.includes('STUDENT ALICE data: Generated') && msg.includes('bits and') && msg.includes('bases')) {
                     level = LogLevel.PROTOCOL;
                     message = `🔬 Student Alice data: Generated ${eventDetails?.message?.match(/(\d+)/g)?.[0] || 0} bits and ${eventDetails?.message?.match(/(\d+)/g)?.[1] || 0} bases`;
+                } else if (msg.includes('Student B92: Sent') && msg.includes('qubits through quantum channel') && msg.includes('b92_send_qubits')) {
+                    level = LogLevel.PROTOCOL;
+                    const qubitsSent = eventDetails?.num_qubits || eventDetails?.message?.match(/(\d+)/g)?.[0] || 0;
+                    message = `🔬 Student B92: Sent ${qubitsSent} qubits through quantum channel [b92_send_qubits]`;
                 } else if (msg.includes('STUDENT ALICE: Prepared') && msg.includes('qubits using b92_send_qubits')) {
                     level = LogLevel.PROTOCOL;
                     const qubitsPrepared = eventDetails?.message?.match(/(\d+)/g)?.[0] || 0;
@@ -46,6 +50,11 @@ export function convertEventToLogB92(eventData: any): any {
                 } else if (msg.includes('STUDENT ALICE: Prepared qubit') && msg.includes('bit') && msg.includes('->')) {
                     level = LogLevel.PROTOCOL;
                     message = `🔬 Student Alice: ${msg.split('STUDENT ALICE: ')[1]} [b92_prepare_qubit]`;
+                } else if (msg.includes('Student Bob: Measured') && msg.includes('qubits') && msg.includes('b92_process_received_qbit')) {
+                    level = LogLevel.PROTOCOL;
+                    const qubitsReceived = eventDetails?.qubits_received || eventDetails?.message?.match(/(\d+)/g)?.[0] || 0;
+                    const totalExpected = eventDetails?.total_expected || eventDetails?.message?.match(/(\d+)/g)?.[1] || 0;
+                    message = `🔬 Student Bob: Measured ${qubitsReceived}/${totalExpected} qubits [b92_process_received_qbit]`;
                 } else if (msg.includes('STUDENT BOB: Measured qubit') && msg.includes('outcome') && msg.includes('basis')) {
                     level = LogLevel.PROTOCOL;
                     message = `🔬 Student Bob: ${msg.split('STUDENT BOB: ')[1]} [b92_measure_qubit]`;
@@ -62,9 +71,9 @@ export function convertEventToLogB92(eventData: any): any {
                     level = LogLevel.PROTOCOL;
                     const received = eventDetails?.message?.match(/(\d+)/g)?.[0] || 0;
                     message = `🔬 Student Bob: Received all ${received} qubits, ready for b92_sifting() [b92_sifting]`;
-                } else if (msg.includes('STUDENT BOB: Starting sifting process')) {
+                } else if (msg.includes('Student Bob: Performing B92 sifting process') && msg.includes('b92_sifting')) {
                     level = LogLevel.PROTOCOL;
-                    message = `🔬 Student Bob: Starting sifting process with Alice's bits [b92_sifting]`;
+                    message = `🔬 Student Bob: Performing B92 sifting process [b92_sifting]`;
                 } else if (msg.includes('STUDENT BOB b92_sifting(): Found') && msg.includes('sifted bits out of')) {
                     level = LogLevel.PROTOCOL;
                     const siftedBits = eventDetails?.shared_bases || 0;
@@ -75,9 +84,14 @@ export function convertEventToLogB92(eventData: any): any {
                     level = LogLevel.PROTOCOL;
                     const siftedBits = eventDetails?.shared_bases || 0;
                     message = `🔬 Student Bob: Sifting completed - found ${siftedBits} sifted bits [b92_sifting]`;
-                } else if (msg.includes('STUDENT BOB: Starting error rate estimation process')) {
+                } else if (msg.includes('STUDENT BOB: Sifting result - Alice:')) {
                     level = LogLevel.PROTOCOL;
-                    message = `🔬 Student Bob: Starting error rate estimation process [b92_estimate_error_rate]`;
+                    const aliceData = eventDetails?.sifted_alice || [];
+                    const bobData = eventDetails?.sifted_bob || [];
+                    message = `🔬 Student Bob: Sifting result - Alice: ${JSON.stringify(aliceData)}, Bob: ${JSON.stringify(bobData)} [b92_sifting]`;
+                } else if (msg.includes('Student Alice: Estimating B92 error rate') && msg.includes('b92_estimate_error_rate')) {
+                    level = LogLevel.PROTOCOL;
+                    message = `🔬 Student Alice: Estimating B92 error rate [b92_estimate_error_rate]`;
                 } else if (msg.includes('STUDENT BOB b92_estimate_error_rate():') && msg.includes('error rate') && msg.includes('errors) using student implementation')) {
                     level = LogLevel.PROTOCOL;
                     const errorRate = eventDetails?.error_rate || 0;
@@ -172,9 +186,54 @@ export function convertEventToLogB92(eventData: any): any {
                     const errorRate = eventDetails?.error_rate || 0;
                     const sharedBases = eventDetails?.shared_bases || 0;
                     message = `🔬 Student B92 Implementation Complete! All methods executed successfully: b92_send_qubits(), b92_process_received_qbit(), b92_sifting(), b92_estimate_error_rate() (${(errorRate * 100).toFixed(1)}% error rate) (${sharedBases} sifted bits)`;
+                } else if (msg.includes('B92 Protocol Complete! All student methods executed successfully') && msg.includes('b92_complete')) {
+                    level = LogLevel.STORY;
+                    message = `🎉 B92 Protocol Complete! All student methods executed successfully [b92_complete]`;
                 } else if (msg.includes('B92 Protocol Complete! All student methods executed successfully')) {
                     level = LogLevel.PROTOCOL;
                     message = `🔬 B92 Protocol Complete! All student methods executed successfully [b92_complete]`;
+                } else if (msg.includes('B92 PROTOCOL COMPLETE - Classical communication finished')) {
+                    level = LogLevel.STORY;
+                    message = `🎉 B92 PROTOCOL COMPLETE - Classical communication finished! [b92_complete]`;
+                } else if (msg.includes('DEBUG: Bridge received classical data:')) {
+                    level = LogLevel.DEBUG;
+                    const dataStr = msg.split('classical data: ')[1] || '';
+                    message = `🐛 Debug: Bridge received classical data: ${dataStr}`;
+                } else if (msg.includes('DEBUG: Processing B92 message type:')) {
+                    level = LogLevel.DEBUG;
+                    const msgType = msg.split('message type: ')[1] || '';
+                    message = `🐛 Debug: Processing B92 message type: ${msgType}`;
+                } else if (msg.includes('DEBUG: Received Alice\'s bits for sifting:')) {
+                    level = LogLevel.DEBUG;
+                    const bits = msg.split('sifting: ')[1] || '';
+                    message = `🐛 Debug: Received Alice's bits for sifting: ${bits}`;
+                } else if (msg.includes('DEBUG: This is Bob, starting sifting process')) {
+                    level = LogLevel.PROTOCOL;
+                    message = `🔬 Student Bob: Received Alice's bits, starting B92 sifting process [b92_sifting]`;
+                } else if (msg.includes('DEBUG: Received sifted bits for error estimation:')) {
+                    level = LogLevel.DEBUG;
+                    const bits = msg.split('estimation: ')[1] || '';
+                    message = `🐛 Debug: Received sifted bits for error estimation: ${bits}`;
+                } else if (msg.includes('DEBUG: This is Alice, starting error estimation')) {
+                    level = LogLevel.PROTOCOL;
+                    message = `🔬 Student Alice: Received sifted bits, starting B92 error estimation [b92_estimate_error_rate]`;
+                } else if (msg.includes('Student Bob: Received Alice\'s bits for sifting:')) {
+                    level = LogLevel.PROTOCOL;
+                    message = msg.replace('🔬 ', '🔬 '); // Keep the message as is
+                } else if (msg.includes('Student Alice: Received sifted bits for error estimation:')) {
+                    level = LogLevel.PROTOCOL;
+                    message = msg.replace('🔬 ', '🔬 '); // Keep the message as is
+                } else if (msg.includes('DEBUG: B92 protocol completion received')) {
+                    level = LogLevel.PROTOCOL;
+                    message = `🔬 Student B92: Protocol completion signal received [b92_complete]`;
+                } else if (msg.includes('DEBUG: Unknown B92 message type:')) {
+                    level = LogLevel.WARNING;
+                    const msgType = msg.split('message type: ')[1] || '';
+                    message = `⚠️ Warning: Unknown B92 message type: ${msgType}`;
+                } else if (msg.includes('ERROR: Error processing B92 classical message:')) {
+                    level = LogLevel.ERROR;
+                    const error = msg.split('message: ')[1] || '';
+                    message = `❌ Error: Error processing B92 classical message: ${error}`;
                 }
             }
 
@@ -393,7 +452,7 @@ export function convertEventToLogB92(eventData: any): any {
             }
         }
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error converting event to log:', error, eventData);
         message = `Error processing event: ${error.message}`;
         level = LogLevel.ERROR;

@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Progress } from "@/components/ui/progress"
 import { Beaker, ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react"
 import { getSimulationNodeTypeString } from "../node/base/enums"
-import { ExerciseI } from "./exercise /exercise"
+import { ExerciseI } from "./exercise/exercise"
 
 interface ActiveLabIndicatorProps {
   activeLab: ExerciseI | null
@@ -54,7 +54,7 @@ export function ActiveLabIndicator({ activeLab, progress, onComplete }: ActiveLa
                     <h4 className="text-sm font-medium">Required Nodes:</h4>
                     <ul className="list-disc list-inside">
                       {Object.entries(
-                        activeLab.requirements.nodes.reduce((acc: Record<string, number>, node) => {
+                        activeLab.requirements.nodes.reduce((acc: Record<string, number>, node: any) => {
                           acc[node] = (acc[node] || 0) + 1
                           return acc
                         }, {})
@@ -71,9 +71,9 @@ export function ActiveLabIndicator({ activeLab, progress, onComplete }: ActiveLa
                   <div>
                     <h4 className="text-sm font-medium">Required Connections:</h4>
                     <ul className="list-disc list-inside">
-                      {activeLab.requirements.connections.map(([source, target], index) => (
+                      {activeLab.requirements.connections.map((connection: any, index: number) => (
                         <li key={index} className="text-slate-800">
-                          {getSimulationNodeTypeString(source)} to {getSimulationNodeTypeString(target)}
+                          {getSimulationNodeTypeString(connection[0])} to {getSimulationNodeTypeString(connection[1])}
                         </li>
                       ))}
                     </ul>

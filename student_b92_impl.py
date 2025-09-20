@@ -206,5 +206,3 @@ class StudentB92Host:
 
         return errors / comparisons if comparisons > 0 else 0.0
 
-
-)

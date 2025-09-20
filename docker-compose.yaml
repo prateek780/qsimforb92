@@ -4,12 +4,13 @@ services:
       context: .
       dockerfile: docker/Dockerfile.python
     container_name: python-server
-    # ports:
-    #   - "8000:8000"
+    ports:
+      - "8000:8000"
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     env_file:
-      - .dockerenv
+      - .env
     volumes:
       - .:/app
     networks:
@@ -24,18 +25,23 @@ services:
     volumes:
       - .:/app
     depends_on:
-      - python-server
+      redis:
+        condition: service_healthy
     env_file:
-      - .dockerenv
+      - .env
     networks:
       - app-network
-
 
   redis:
     image: redis/redis-stack-server:latest
     container_name: redis
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-network
 
@@ -48,7 +54,8 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     networks:
       - app-network
       
@@ -61,7 +68,6 @@ services:
       - "8001:80"
     depends_on:
       - python-server
-      # - ui-builder
     networks:
       - app-network
 

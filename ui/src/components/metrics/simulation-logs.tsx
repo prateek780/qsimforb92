@@ -74,7 +74,9 @@ export enum LogLevel {
   PROTOCOL = 2, // Detailed steps: How did it happen?
   NETWORK = 3, // Verbose mechanics: The nitty-gritty details.
   WARN = 4,
+  WARNING = 4,  // Add WARNING as alias for WARN
   ERROR = 5,
+  DEBUG = 6,    // Add DEBUG level
 }
 
 export interface LogI {
@@ -108,14 +110,34 @@ export function SimulationLogsPanel() {
   // Protocol detection function
   const detectActiveProtocol = (): string => {
     // Check if B92 events are present in recent logs
-    const recentLogs = socket.simulationEventLogs.slice(-10); // Check last 10 events
+    const recentLogs = socket.simulationEventLogs.slice(-20); // Check last 20 events
     const hasB92Events = recentLogs.some(log => 
       log?.data?.message?.includes('B92') || 
+      log?.data?.message?.includes('STUDENT B92') ||
+      log?.data?.message?.includes('StudentB92Host') ||
       log?.data?.type?.includes('b92') ||
-      log?.data?.message?.includes('b92_')
+      log?.data?.message?.includes('b92_') ||
+      log?.data?.protocol === 'B92' ||
+      log?.node?.includes('B92') ||
+      log?.event_type?.includes('b92')
     );
     
-    if (hasB92Events) {
+    // Also check console logs for B92 activity
+    const hasB92ConsoleActivity = recentLogs.some(log =>
+      log?.data?.message?.includes('Starting B92') ||
+      log?.data?.message?.includes('B92 Process') ||
+      log?.data?.message?.includes('B92 sifting') ||
+      log?.data?.message?.includes('QuantumHostB92') ||
+      // Check for B92 classical communication events
+      log?.data?.message?.includes('Bridge received classical data') ||
+      log?.data?.message?.includes('Processing B92 message type') ||
+      log?.data?.message?.includes('starting sifting process') ||
+      log?.data?.message?.includes('starting error estimation') ||
+      log?.data?.message?.includes('B92 protocol completion') ||
+      log?.data?.message?.includes('Classical communication finished')
+    );
+    
+    if (hasB92Events || hasB92ConsoleActivity) {
       return 'B92';
     }
     
@@ -138,7 +160,7 @@ export function SimulationLogsPanel() {
     socket.simulationEventLogs
       .reverse()
       .map((x) => parseEventToLog(x))
-      .filter((x) => x !== undefined),
+      .filter((x) => x !== undefined && x !== null),
   )
   const [filteredLogs, setFilteredLogs] = useState<LogI[]>(simulationLogs)
   const [recentLogIds, setRecentLogIds] = useState<Set<string>>(new Set())

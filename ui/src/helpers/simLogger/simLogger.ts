@@ -187,6 +187,7 @@ export class SimLogger {
 export enum LogLevel {
     ERROR = 0,
     WARN = 1,
+    WARNING = 1,  // Add WARNING as alias for WARN
     INFO = 2,
     DEBUG = 3,
     TRACE = 4

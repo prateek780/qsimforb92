@@ -83,8 +83,8 @@ class EnhancedStudentImplementationBridgeB92:
             self.host._send_update(SimulationEventType.INFO, 
                                    num_qubits=num_qubits, 
                                    protocol="B92",
-                                   message=f"STUDENT B92: Starting with {num_qubits} qubits using your code!",
-                                   student_implementation="StudentB92Host")
+                                   message=f"🔬 Student B92: Sent {num_qubits} qubits through quantum channel [b92_send_qubits]",
+                                   student_method="b92_send_qubits")
         
         # Call student's method
         encoded_qubits = self.student_alice.b92_send_qubits(num_qubits)
@@ -131,9 +131,17 @@ class EnhancedStudentImplementationBridgeB92:
         
         if self.host and hasattr(self.host, '_send_update'):
             from core.enums import SimulationEventType
+            # Send the main working event
             self.host._send_update(SimulationEventType.DATA_SENT, 
                                    qubits_sent=len(encoded_qubits),
                                    message=f"STUDENT B92: Sending {len(encoded_qubits)} encoded qubits from Alice's b92_send_qubits() through quantum channel ({len(encoded_qubits)} qubits) - Sample: [|0>, |+>, |0>...]")
+            
+            # Send enhanced B92 method call event
+            self.host._send_update(SimulationEventType.DATA_SENT, 
+                                   qubits_sent=len(encoded_qubits),
+                                   protocol="B92",
+                                   message=f"🔬 Student B92: Sent {len(encoded_qubits)} qubits through quantum channel [b92_send_qubits]",
+                                   student_method="b92_send_qubits")
         
         # Trigger sifting by sending Alice's bits to Bob
         if self.host and hasattr(self.host, 'send_classical_data'):
@@ -145,6 +153,10 @@ class EnhancedStudentImplementationBridgeB92:
         
         return True
     
+    def b92_process_received_qbit(self, qbit, from_channel):
+        """Measure received qubit using student's implementation"""
+        return self.process_received_qbit(qbit, from_channel)
+        
     def process_received_qbit(self, qbit, from_channel):
         """Measure received qubit using student's implementation"""
         if self.host is None:
@@ -179,6 +191,15 @@ class EnhancedStudentImplementationBridgeB92:
         
         if self.host and hasattr(self.host, '_send_update'):
             from core.enums import SimulationEventType
+            # Send enhanced B92 method call event
+            self.host._send_update(SimulationEventType.DATA_RECEIVED,
+                                   message=f"🔬 Student Bob: Measured {self.bits_received}/{self.expected_bits} qubits [b92_process_received_qbit]",
+                                   qubits_received=self.bits_received,
+                                   total_expected=self.expected_bits,
+                                   protocol="B92",
+                                   student_method="b92_process_received_qbit")
+            
+            # Send the main working event
             self.host._send_update(SimulationEventType.DATA_RECEIVED,
                                    message=f"STUDENT BOB: Received qubit {self.bits_received}/{self.expected_bits}!",
                                    qubits_received=self.bits_received,
@@ -211,8 +232,10 @@ class EnhancedStudentImplementationBridgeB92:
         # Log detailed sifting process
         if self.host and hasattr(self.host, '_send_update'):
             from core.enums import SimulationEventType
-            self.host._send_update(SimulationEventType.INFO,
-                                   message=f"STUDENT BOB: Starting sifting process with Alice's bits [b92_sifting]")
+            self.host._send_update(SimulationEventType.DATA_RECEIVED,
+                                   message=f"🔬 Student Bob: Performing B92 sifting process [b92_sifting]",
+                                   protocol="B92",
+                                   student_method="b92_sifting")
         
         # Debug: Print data before sifting
         print(f"DEBUG: Alice sent_bits: {getattr(self.student_alice, 'sent_bits', [])}")
@@ -280,13 +303,8 @@ class EnhancedStudentImplementationBridgeB92:
         # Log detailed sifting results
         if self.host and hasattr(self.host, '_send_update'):
             from core.enums import SimulationEventType
-            self.host._send_update(SimulationEventType.INFO,
+            self.host._send_update(SimulationEventType.DATA_RECEIVED,
                                    message=f"STUDENT BOB b92_sifting(): Found {len(sifted_bob)} sifted bits out of {total_bits} (Efficiency: {efficiency:.1f}%) [b92_sifting]",
-                                   shared_bases=len(sifted_bob),
-                                   efficiency=efficiency)
-            
-            self.host._send_update(SimulationEventType.INFO,
-                                   message=f"STUDENT BOB: Sifting completed - found {len(sifted_bob)} sifted bits [b92_sifting]",
                                    shared_bases=len(sifted_bob),
                                    efficiency=efficiency)
         
@@ -305,8 +323,10 @@ class EnhancedStudentImplementationBridgeB92:
         # Log detailed error estimation process
         if self.host and hasattr(self.host, '_send_update'):
             from core.enums import SimulationEventType
-            self.host._send_update(SimulationEventType.INFO,
-                                   message=f"STUDENT BOB: Starting error rate estimation process [b92_estimate_error_rate]")
+            self.host._send_update(SimulationEventType.DATA_RECEIVED,
+                                   message=f"🔬 Student Alice: Estimating B92 error rate [b92_estimate_error_rate]",
+                                   protocol="B92",
+                                   student_method="b92_estimate_error_rate")
         
         # Debug: Print data before error estimation
         print(f"DEBUG: Bob sifted_key: {getattr(self.student_bob, 'sifted_key', [])}")
@@ -351,12 +371,8 @@ class EnhancedStudentImplementationBridgeB92:
         # Log detailed error estimation results
         if self.host and hasattr(self.host, '_send_update'):
             from core.enums import SimulationEventType
-            self.host._send_update(SimulationEventType.INFO,
+            self.host._send_update(SimulationEventType.DATA_RECEIVED,
                                    message=f"STUDENT BOB b92_estimate_error_rate(): {error_rate:.1%} error rate ({error_count}/{total_comparisons} errors) using student implementation [b92_estimate_error_rate]",
-                                   error_rate=error_rate)
-            
-            self.host._send_update(SimulationEventType.INFO,
-                                   message=f"STUDENT BOB: Error rate {error_rate:.1%} using b92_estimate_error_rate()!",
                                    error_rate=error_rate)
         
         if self.host and hasattr(self.host, '_send_update'):
@@ -365,6 +381,14 @@ class EnhancedStudentImplementationBridgeB92:
                                    message="B92 QKD protocol completed successfully using student's code!",
                                    error_rate=error_rate,
                                    shared_bases=len(self.host.shared_bases_indices))
+        
+        # Send final protocol completion event
+        if self.host and hasattr(self.host, '_send_update'):
+            from core.enums import SimulationEventType
+            self.host._send_update(SimulationEventType.DATA_RECEIVED,
+                                   message=f"🎉 B92 Protocol Complete! All student methods executed successfully [b92_complete]",
+                                   protocol="B92",
+                                   student_method="b92_complete")
         
         self.host.send_classical_data({'type': 'complete'})
         self.qkd_phase = "complete"
@@ -384,6 +408,7 @@ class EnhancedStudentImplementationBridgeB92:
             self.host.update_sifted_bits(sifted_bits)
         
         return True
+    
 
 # ==========================================
 # Simple wrapper to attach bridge to host
@@ -405,6 +430,9 @@ class StudentImplementationBridgeB92:
     def b92_send_qubits(self, num_qubits):
         return self._bridge.b92_send_qubits(num_qubits)
     
+    def b92_process_received_qbit(self, qbit, from_channel):
+        return self._bridge.b92_process_received_qbit(qbit, from_channel)
+        
     def process_received_qbit(self, qbit, from_channel):
         return self._bridge.process_received_qbit(qbit, from_channel)
     
@@ -413,3 +441,4 @@ class StudentImplementationBridgeB92:
     
     def b92_estimate_error_rate(self, their_bits_sample):
         return self._bridge.b92_estimate_error_rate(their_bits_sample)
+    

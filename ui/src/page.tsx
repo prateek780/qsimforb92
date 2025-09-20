@@ -9,6 +9,7 @@ import { NodeDetailPanel } from "./components/node/node-detail-panel"
 import { JSONFormatViewer } from "./components/metrics/json-viewer"
 import api from "./services/api"
 import { SimulationLogsPanel } from "./components/metrics/simulation-logs"
+import SimulationLogsB92 from "./components/metrics/simulation-logs-b92"
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner"
 import { ActiveLabIndicator } from "./components/labs/active-lab-indicator"
@@ -56,6 +57,9 @@ export default function QuantumNetworkSimulator() {
   // State variable for the AI panel
   const [isAIPanelOpen, setIsAIPanelOpen] = useState(false)
   
+  // State for protocol detection
+  const [activeProtocol, setActiveProtocol] = useState<string>("BB84")
+  
   // State for student implementation blocking
   const [showVibeCodeOverlay, setShowVibeCodeOverlay] = useState(false)
   const [studentImplementationStatus, setStudentImplementationStatus] = useState<{
@@ -85,13 +89,50 @@ export default function QuantumNetworkSimulator() {
     // Check student implementation status on component mount
     checkStudentImplementationStatus();
     
+    // Detect active protocol
+    detectActiveProtocol();
+    
     // Set up periodic checking (every 30 seconds)
     const checkInterval = setInterval(() => {
       checkStudentImplementationStatus();
+      detectActiveProtocol();
     }, 30000);
     
     return () => clearInterval(checkInterval);
   }, []);
+
+  // Detect which QKD protocol is active
+  const detectActiveProtocol = async () => {
+    try {
+      // Check for B92 status file
+      const response = await fetch('/api/simulation/student-implementation-status-b92/');
+      if (response.ok) {
+        const b92Status = await response.json();
+        if (b92Status.has_valid_implementation) {
+          setActiveProtocol("B92");
+          return;
+        }
+      }
+    } catch (error) {
+      // B92 not available, check BB84
+    }
+    
+    try {
+      // Check for BB84 status file
+      const response = await fetch('/api/simulation/student-implementation-status/');
+      if (response.ok) {
+        const bb84Status = await response.json();
+        if (bb84Status.has_valid_implementation) {
+          setActiveProtocol("BB84");
+          return;
+        }
+      }
+    } catch (error) {
+      // Default to BB84
+    }
+    
+    setActiveProtocol("BB84"); // Default
+  };
 
   // Update simulation time when running
   useEffect(() => {

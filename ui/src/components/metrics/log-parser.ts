@@ -16,9 +16,9 @@ function formatTime(date: Date): string {
 /**
  * Converts a raw websocket event object into a human-readable LogI object.
  * @param eventData The raw event object received from the websocket.
- * @returns A LogI object representing the formatted log message.
+ * @returns A LogI object representing the formatted log message, or null if the event should be skipped.
  */
-export function convertEventToLog(eventData: any): LogI {
+export function convertEventToLog(eventData: any): LogI | null {
     const time = formatTime(new Date());
     let level: LogLevel = LogLevel.PROTOCOL; // Default to a standard protocol-level log
     let source = 'Simulation'; // Default source if node is not available

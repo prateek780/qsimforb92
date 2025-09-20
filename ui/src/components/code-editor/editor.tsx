@@ -13,7 +13,7 @@ import { Send, Plus, Atom, Zap } from "lucide-react"
 // Monaco Editor imports
 import { Editor, Monaco } from "@monaco-editor/react"
 import { editor, Range } from 'monaco-editor';
-import { ExerciseI } from "../labs/exercise /exercise"
+import { ExerciseI } from "../labs/exercise/exercise"
 import api from "@/services/api"
 import { AgentID } from "../ai-agents/agent-declaration"
 import { LabAssistantRequest } from "../ai-agents/message.interface"
@@ -175,14 +175,14 @@ export default function QuantumCodeEditor({ activeLab }: QuantumCodeEditorProps)
     // Get editable function names from lab config
     const editableFunctionNames = new Set(
         activeLab?.coding?.scaffold?.sections
-            ?.filter(section => section.type === 'editable')
-            ?.map(section => section.functionName) || []
+            ?.filter((section: any) => section.type === 'editable')
+            ?.map((section: any) => section.functionName) || []
     );
 
     // Create readonly ranges for all sections except editable functions
     const readonlyRanges: Range[] = [];
     
-    parsedSections.forEach(section => {
+    parsedSections.forEach((section: any) => {
         const isEditable = editableFunctionNames.has(section.name);
         
         if (!isEditable && section.type === 'function') {
@@ -675,7 +675,7 @@ const applyReadonlyBehavior = (editorObj: editor.IStandaloneCodeEditor, readonly
                         <div className="p-2 sm:p-3 border-b border-slate-700 flex-shrink-0">
                             <div className="text-xs text-slate-400 mb-2">Quick prompts:</div>
                             <div className="flex flex-wrap gap-1">
-                                {(activeLab?.coding?.aiPrompts || QUICK_PROMPTS).slice(0, window.innerWidth < 640 ? 2 : 3).map((prompt, index) => (
+                                {(activeLab?.coding?.aiPrompts || QUICK_PROMPTS).slice(0, window.innerWidth < 640 ? 2 : 3).map((prompt: any, index: number) => (
                                     <Button
                                         key={index}
                                         variant="outline"

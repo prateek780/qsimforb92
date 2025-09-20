@@ -134,23 +134,35 @@ class InteractiveQuantumHostB92(QuantumNode):
     def _try_load_student_implementation(self):
         """Try to load student implementation using enhanced bridge"""
         try:
-            from enhancedb92_bridge import EnhancedB92Bridge
+            print(f"DEBUG: {self.name} Attempting to import enhanced bridge...")
+            from enhanced_student_bridge_b92 import EnhancedStudentImplementationBridgeB92
             print("🔧 Attempting to load B92 student implementation using enhanced bridge...")
             
-            self.enhanced_bridge = EnhancedB92Bridge()
+            self.enhanced_bridge = EnhancedStudentImplementationBridgeB92()
+            print(f"DEBUG: {self.name} Enhanced bridge created: {type(self.enhanced_bridge)}")
             
-            if self.enhanced_bridge.student_alice and self.enhanced_bridge.student_bob:
-                print("✅ Enhanced bridge loaded B92 student implementation successfully!")
-                # Set the host reference on the enhanced bridge
-                self.enhanced_bridge.host = self
-                self.student_implementation = self.enhanced_bridge
-                return True
+            if hasattr(self.enhanced_bridge, 'student_alice') and hasattr(self.enhanced_bridge, 'student_bob'):
+                print(f"DEBUG: {self.name} Bridge has student_alice: {self.enhanced_bridge.student_alice is not None}")
+                print(f"DEBUG: {self.name} Bridge has student_bob: {self.enhanced_bridge.student_bob is not None}")
+                
+                if self.enhanced_bridge.student_alice and self.enhanced_bridge.student_bob:
+                    print("✅ Enhanced bridge loaded B92 student implementation successfully!")
+                    # Set the host reference on the enhanced bridge
+                    self.enhanced_bridge.host = self
+                    print(f"DEBUG: {self.name} Set enhanced_bridge.host = {self.enhanced_bridge.host}")
+                    self.student_implementation = self.enhanced_bridge
+                    return True
+                else:
+                    print("❌ Enhanced bridge could not load student implementation - missing alice/bob")
+                    return False
             else:
-                print("❌ Enhanced bridge could not load student implementation")
+                print("❌ Enhanced bridge missing student_alice or student_bob attributes")
                 return False
                 
         except Exception as e:
             print(f"❌ Error loading student implementation with enhanced bridge: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def validate_student_implementation(self) -> bool:
@@ -275,9 +287,15 @@ class InteractiveQuantumHostB92(QuantumNode):
         
         # Process the received qubit using B92 protocol
         print(f"DEBUG: Processing qubit {self._qubit_receive_count}: {qbit} from {from_channel}")
+        print(f"DEBUG: {self.name} receive_qubit - enhanced_bridge exists: {self.enhanced_bridge is not None}")
+        if self.enhanced_bridge:
+            print(f"DEBUG: {self.name} enhanced_bridge has b92_process_received_qbit: {hasattr(self.enhanced_bridge, 'b92_process_received_qbit')}")
+            
         if self.enhanced_bridge and hasattr(self.enhanced_bridge, 'b92_process_received_qbit'):
+            print(f"DEBUG: {self.name} USING ENHANCED BRIDGE for b92_process_received_qbit")
             self.enhanced_bridge.b92_process_received_qbit(qbit, from_channel)
         elif hasattr(self, 'b92_process_received_qbit'):
+            print(f"DEBUG: {self.name} USING HOST METHOD for b92_process_received_qbit")
             self.b92_process_received_qbit(qbit, from_channel)
 
     def b92_send_qubits(self, num_qubits: int = None):
@@ -295,7 +313,12 @@ class InteractiveQuantumHostB92(QuantumNode):
             num_qubits = default_bits
         
         # Use enhanced bridge if available - let bridge handle all event logging
+        print(f"DEBUG: {self.name} b92_send_qubits - enhanced_bridge exists: {self.enhanced_bridge is not None}")
+        if self.enhanced_bridge:
+            print(f"DEBUG: {self.name} enhanced_bridge has b92_send_qubits: {hasattr(self.enhanced_bridge, 'b92_send_qubits')}")
+        
         if self.enhanced_bridge and hasattr(self.enhanced_bridge, 'b92_send_qubits'):
+            print(f"DEBUG: {self.name} USING ENHANCED BRIDGE for b92_send_qubits with {num_qubits} qubits")
             # Notify all other B92 hosts about the expected number of qubits
             self._notify_expected_qubits(num_qubits)
             return self.enhanced_bridge.b92_send_qubits(num_qubits)
@@ -477,6 +500,7 @@ class InteractiveQuantumHostB92(QuantumNode):
         print(f"📨 {self.name}: Processing message: {message.get('type', 'unknown')}")
         
         message_type = message.get("type")
+        
         
         if self.protocol == "b92" or self.entangled_channel:
             if message_type == "reconcile_bases" or message_type == "sifting":

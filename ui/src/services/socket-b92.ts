@@ -239,6 +239,10 @@ class B92WebSocketService {
     return this.b92Logs.slice(-count);
   }
 
+  public clearB92Logs(): void {
+    this.b92Logs = [];
+  }
+
   public isConnectedToB92(): boolean {
     return this.isConnected;
   }
