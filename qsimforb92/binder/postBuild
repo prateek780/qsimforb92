@@ -12,22 +12,8 @@ export DISABLE_EMBEDDING=1
 export DISABLE_AI_FEATURES=1
 export DISABLE_REDIS_LOGGING=1
 
-# Build the React frontend
-echo "🔨 Building React frontend..."
-cd ui
-if [ -f "package.json" ]; then
-    # Install Node.js dependencies
-    npm install --silent
-    
-    # Build the frontend
-    npm run build --silent
-    
-    echo "✅ Frontend built successfully"
-else
-    echo "⚠️ No package.json found in ui directory"
-fi
-
-cd ..
+# Install qutip via pip (more reliable than conda)
+echo "🔬 Installing qutip via pip..."
+pip install qutip
 
 echo "✅ Setup complete - Quantum networking system ready!"
-
